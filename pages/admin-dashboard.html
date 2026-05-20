@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — MetroMart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../vendor/leaflet/leaflet.min.css">
+<script src="../vendor/leaflet/leaflet.min.js"></script>
+<style>
+.report-badge{display:inline-block;background:#fee2e2;color:#991b1b;border-radius:30px;padding:3px 10px;font-size:11px;font-weight:700;margin-left:6px;}
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--stone-dark);margin-bottom:24px;overflow-x:auto;}
+.tab-btn{padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:none;font-family:inherit;color:var(--ink-soft);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;}
+.tab-btn.active{color:var(--green);border-bottom-color:var(--green);font-weight:600;}
+.tab-btn:hover:not(.active){color:var(--ink);}
+.search-inline{display:flex;align-items:center;gap:8px;background:var(--stone);border:1.5px solid var(--stone-dark);border-radius:40px;padding:7px 14px;max-width:280px;flex:1;transition:border-color .18s;}
+.search-inline:focus-within{border-color:var(--green-mid);}
+.search-inline input{border:none;background:none;outline:none;font-size:14px;font-family:inherit;width:100%;}
+.section-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap;}
+.user-row-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.detail-item label{font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;}
+.detail-item span{font-size:14px;font-weight:500;}
+.pw-mini-wrap{height:3px;border-radius:2px;margin-top:6px;background:var(--stone-mid);overflow:hidden;}
+.pw-mini-fill{height:100%;border-radius:2px;transition:width .3s,background .3s;}
+.report-card{background:var(--white);border:1px solid var(--stone-dark);border-radius:var(--radius-md);padding:16px 18px;margin-bottom:12px;}
+.report-type{font-size:11px;font-weight:700;padding:3px 10px;border-radius:30px;text-transform:uppercase;letter-spacing:.5px;}
+.status-active-badge{background:#dcfce7;color:#15803d;border-radius:30px;padding:3px 10px;font-size:11px;font-weight:700;}
+.status-inactive-badge{background:#fee2e2;color:#991b1b;border-radius:30px;padding:3px 10px;font-size:11px;font-weight:700;}
+/* Address picker (copied from register.html) */
+.address-picker{width:100%;background:var(--stone);border:1.5px solid var(--stone-dark);border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .18s;font-size:14px;color:var(--ink);min-height:48px;}
+.address-picker:hover{border-color:var(--green-mid);}
+.address-picker.has-value{border-color:var(--green-mid);background:var(--green-light);}
+.address-picker span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.address-picker .ap-placeholder{color:var(--stone-dark);}
+
+/* Map modal styles (reused) */
+.map-modal-wrap{background:var(--white);border-radius:16px;width:92%;max-width:640px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.12);} 
+.map-modal-head{padding:12px 16px;border-bottom:1px solid var(--stone-dark);display:flex;align-items:center;justify-content:space-between;}
+.map-modal-head h3{font-family:'Fraunces',serif;font-size:18px;font-weight:400;margin:0}
+.map-modal-close{width:32px;height:32px;border-radius:50%;background:var(--stone-mid);border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.map-modal-close:hover{background:var(--stone-dark)}
+.map-hint{padding:10px 16px;font-size:13px;color:var(--ink-soft);background:var(--green-light)}
+#merchantAddressPickerMap{height:360px;width:100%;}
+.map-modal-foot{padding:10px 12px;border-top:1px solid var(--stone-dark);display:flex;gap:8px;align-items:center}
+.map-modal-foot input{flex:1;min-width:120px;border:1.5px solid var(--stone-dark);border-radius:40px;padding:10px 14px;font-size:14px;outline:none}
+.btn-my-loc{padding:8px 12px;border-radius:40px;background:var(--green-light);color:var(--green);font-weight:600;border:none}
+.btn-confirm-loc{padding:8px 14px;border-radius:40px;background:var(--green);color:#fff;border:none}
+</style>
+</head>
+<body>
+<div class="app-layout">
+
+  <div class="sidebar">
+    <div class="sidebar-logo">Metro<span class="logo-dark">Mart</span></div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="showTab('overview')"  id="nav-overview">  <span class="nav-icon">📊</span> Overview</div>
+      <div class="nav-label" style="margin-top:10px">Management</div>
+      <div class="nav-item" onclick="showTab('merchants')"  id="nav-merchants"> <span class="nav-icon">🏪</span> Merchants</div>
+      <div class="nav-item" onclick="showTab('employees')"  id="nav-employees"> <span class="nav-icon">👷</span> Employees</div>
+      <div class="nav-item" onclick="showTab('riders')"     id="nav-riders">    <span class="nav-icon">🚴</span> Riders</div>
+      <div class="nav-item" onclick="showTab('customers')"  id="nav-customers"> <span class="nav-icon">👥</span> Customers</div>
+      <div class="nav-label" style="margin-top:10px">Monitoring</div>
+      <div class="nav-item" onclick="showTab('reports')"    id="nav-reports">   <span class="nav-icon">🚩</span> Reports <span id="reportsBadge" style="display:none;" class="report-badge">0</span></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="nav-item" id="navAdminName"><span class="nav-icon">👤</span> <span id="adminNameLabel">Admin</span></div>
+      <div class="nav-item" onclick="doLogout()"><span class="nav-icon">🚪</span> Log out</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title" style="font-family:'Fraunces',serif;font-weight:400;font-size:18px;">Admin Dashboard</div>
+      <div class="topbar-actions">
+        <div class="avatar" id="adminAvatar" style="background:#6d28d9;">A</div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- OVERVIEW -->
+      <div id="tab-overview">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon">🏪</div><div class="stat-val" id="cntMerchants">—</div><div class="stat-label">Merchants</div></div>
+          <div class="stat-card"><div class="stat-icon">👷</div><div class="stat-val" id="cntEmployees">—</div><div class="stat-label">Employees</div></div>
+          <div class="stat-card"><div class="stat-icon">🚴</div><div class="stat-val" id="cntRiders">—</div><div class="stat-label">Riders</div></div>
+          <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-val" id="cntCustomers">—</div><div class="stat-label">Customers</div></div>
+        </div>
+      </div>
+
+      <!-- MERCHANTS -->
+      <div id="tab-merchants" style="display:none;">
+        <div class="section-toolbar">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h3 class="sec-title">Merchants</h3>
+            <span class="badge badge-green" id="merchantCount">0</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="search-inline">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="merchantSearch" placeholder="Search merchants…" oninput="filterTable('merchantsBody',this.value,[1,2,3])">
+            </div>
+            <button class="btn btn-primary" onclick="openMerchantModal()">+ Add Merchant</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body table-wrap">
+            <table><thead><tr><th>Logo</th><th>Name</th><th>Address</th><th>Contact</th><th>Assigned Employee</th><th>Actions</th></tr></thead>
+            <tbody id="merchantsBody"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">Loading…</td></tr></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMPLOYEES -->
+      <div id="tab-employees" style="display:none;">
+        <div class="section-toolbar">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h3 class="sec-title">Employees</h3>
+            <span class="badge badge-green" id="employeeCount">0</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="search-inline">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="employeeSearch" placeholder="Search employees…" oninput="filterTable('employeesBody',this.value,[0,3])">
+            </div>
+            <button class="btn btn-primary" onclick="openEmployeeModal()">+ Add Employee</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body table-wrap">
+            <table><thead><tr><th>Name</th><th>Email</th><th>Position</th><th>Store</th><th>Status</th><th>PW Status</th><th>Actions</th></tr></thead>
+            <tbody id="employeesBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIDERS -->
+      <div id="tab-riders" style="display:none;">
+        <div class="section-toolbar">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h3 class="sec-title">Riders</h3>
+            <span class="badge badge-green" id="riderCount">0</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="search-inline">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="riderSearch" placeholder="Search riders…" oninput="filterTable('ridersBody',this.value,[0,1])">
+            </div>
+            <button class="btn btn-primary" onclick="openRiderModal()">+ Add Rider</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body table-wrap">
+            <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Vehicle</th><th>Status</th><th>PW Status</th><th>Actions</th></tr></thead>
+            <tbody id="ridersBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CUSTOMERS -->
+      <div id="tab-customers" style="display:none;">
+        <div class="section-toolbar">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h3 class="sec-title">Customers</h3>
+            <span class="badge badge-green" id="customerCount">0</span>
+          </div>
+          <div class="search-inline">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="customerSearch" placeholder="Search customers…" oninput="filterTable('customersBody',this.value,[0,1,2])">
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-body table-wrap">
+            <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="customersBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORTS -->
+      <div id="tab-reports" style="display:none;">
+        <div class="page-header"><h2>Reports &amp; Complaints</h2><p>Reports filed by riders about customers.</p></div>
+        <div class="tab-bar" id="reportTabBar">
+          <button class="tab-btn active" onclick="setReportTab('pending',this)">⏳ Pending</button>
+          <button class="tab-btn" onclick="setReportTab('reviewed',this)">✅ Reviewed</button>
+          <button class="tab-btn" onclick="setReportTab('dismissed',this)">❌ Dismissed</button>
+          <button class="tab-btn" onclick="setReportTab('all',this)">All</button>
+        </div>
+        <div id="reportsContainer"><p class="text-muted" style="padding:32px;">Loading…</p></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── MERCHANT MODAL ── -->
+<div class="modal-overlay" id="merchantModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="merchantModalTitle">Add Merchant</h3><button class="modal-close" onclick="closeModal('merchantModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editMerchantId">
+      <div style="text-align:center;margin-bottom:16px;">
+        <div id="mImgPreview" style="width:90px;height:90px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 8px;overflow:hidden;border:2px solid var(--stone-dark);cursor:pointer;" onclick="document.getElementById('mImgInput').click()">🏪</div>
+        <div style="font-size:12px;color:var(--ink-soft);">Click to upload logo</div>
+        <input type="file" id="mImgInput" accept="image/*" style="display:none;" onchange="previewImg('mImgInput','mImgPreview')">
+      </div>
+      <div class="form-group"><label class="form-label">Merchant Name <span class="required">*</span></label><input class="form-control" id="mName" placeholder="e.g. SM Supermarket — Mabolo"></div>
+      <div class="form-group"><label class="form-label">Address</label>
+        <div class="address-picker" id="mAddressPicker" onclick="openMerchantAddressModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--green);"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="ap-placeholder" id="mAddressDisplay">Click to pin the store location on map</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:.4;"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <input type="hidden" id="mAddressVal">
+        <input type="hidden" id="mLatitude">
+        <input type="hidden" id="mLongitude">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contact</label>
+        <input class="form-control" id="mContact" placeholder="9171234567" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" required oninput="handlePhoneInput(this)">
+        <div class="phone-hint" id="mContactHint" style="font-size:11px;color:var(--ink-soft);margin-top:5px;">Philippine number — 10 digits starting with 9 (e.g. 9171234567)</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('merchantModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMerchant()">Save Merchant</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── EMPLOYEE MODAL ── -->
+<div class="modal-overlay" id="employeeModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="employeeModalTitle">Add Employee</h3><button class="modal-close" onclick="closeModal('employeeModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editEmployeeId">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">First Name <span class="required">*</span></label><input class="form-control" id="eFName"></div>
+        <div class="form-group"><label class="form-label">Last Name <span class="required">*</span></label><input class="form-control" id="eLName"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Email <span class="required">*</span></label><input class="form-control" id="eEmail" type="email"></div>
+      <div class="form-group" id="ePassGroup">
+        <label class="form-label">Temporary Password <span class="required">*</span></label>
+        <input class="form-control" id="ePass" type="password" placeholder="Min 8 chars" oninput="showPwMini(this.value,'ePwMini')">
+        <div class="pw-mini-wrap"><div class="pw-mini-fill" id="ePwMini"></div></div>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:5px;">Employee will be required to change this on first login.</div>
+      </div>
+      <div class="form-group"><label class="form-label">Position</label><input class="form-control" id="ePosition" placeholder="e.g. Cashier, Store Manager"></div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input class="form-control" id="ePhone" placeholder="9171234567" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" oninput="handlePhoneInput(this)">
+        <div class="phone-hint" id="ePhoneHint" style="font-size:11px;color:var(--ink-soft);margin-top:5px;">Philippine number — 10 digits starting with 9 (e.g. 9171234567)</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Assign to Merchant <span class="required">*</span></label>
+        <select class="form-control" id="eMerchant"><option value="">Select merchant…</option></select>
+        <div id="merchantAssignWarning" style="display:none;font-size:12px;color:var(--red);margin-top:5px;"></div>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:5px;">⚠ Each merchant can only have 1 assigned employee.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('employeeModal')">Cancel</button>
+      <button class="btn btn-primary" id="saveEmployeeBtn" onclick="saveEmployee()">Create Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RIDER MODAL ── -->
+<div class="modal-overlay" id="riderModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="riderModalTitle">Add Rider</h3><button class="modal-close" onclick="closeModal('riderModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editRiderId">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">First Name <span class="required">*</span></label><input class="form-control" id="rFName"></div>
+        <div class="form-group"><label class="form-label">Last Name <span class="required">*</span></label><input class="form-control" id="rLName"></div>
+      </div>
+<div class="form-group"><label class="form-label">Email <span class="required">*</span></label><input class="form-control" id="rEmail" type="email"></div>
+      <div class="form-group" id="rPassGroup">
+        <label class="form-label">Temporary Password <span class="required">*</span></label>
+                <input class="form-control" id="rPass" type="password" placeholder="Min 8 chars" oninput="showPwMini(this.value,'rPwMini')">
+        <div class="pw-mini-wrap"><div class="pw-mini-fill" id="rPwMini"></div></div>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:5px;">Rider will be required to change this on first login.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input class="form-control" id="rPhone" placeholder="9171234567" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" oninput="handlePhoneInput(this)">
+        <div class="phone-hint" id="rPhoneHint" style="font-size:11px;color:var(--ink-soft);margin-top:5px;">Philippine number — 10 digits starting with 9 (e.g. 9171234567)</div>
+      </div>
+      <div class="form-group"><label class="form-label">Vehicle</label>
+        <select class="form-control" id="rVehicle">
+          <option value="motorcycle">Motorcycle 🏍️</option>
+          <option value="bicycle">Bicycle 🚲</option>
+          <option value="car">Car 🚗</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('riderModal')">Cancel</button>
+      <button class="btn btn-primary" id="saveRiderBtn" onclick="saveRider()">Create Rider</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RESET PASSWORD MODAL ── -->
+<div class="modal-overlay" id="resetPwModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><h3>Reset Password</h3><button class="modal-close" onclick="closeModal('resetPwModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="resetPwUserId">
+      <div style="background:var(--stone);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:14px;">
+        Resetting password for: <strong id="resetPwName">—</strong>
+      </div>
+      <div class="form-group"><label class="form-label">New Temporary Password <span class="required">*</span></label>
+        <input class="form-control" id="newPwInput" type="password" placeholder="Min 8 chars" oninput="showPwMini(this.value,'resetPwMini')">
+        <div class="pw-mini-wrap"><div class="pw-mini-fill" id="resetPwMini"></div></div>
+      </div>
+      <div class="form-group"><label class="form-label">Confirm Password <span class="required">*</span></label>
+        <input class="form-control" id="confirmPwInput" type="password" placeholder="Repeat password">
+      </div>
+      <div style="font-size:12px;color:var(--ink-soft);margin-top:6px;">The user will be required to change this on next login.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('resetPwModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doResetPassword()">Reset Password</button>
+    </div>
+  </div>
+</div>
+
+    <!-- Merchant Address Picker Modal -->
+    <div class="modal-overlay" id="merchantAddressModal">
+      <div class="map-modal-wrap">
+        <div class="map-modal-head">
+          <h3>Pin Store Location</h3>
+          <button class="map-modal-close" onclick="closeMerchantAddressModal()">✕</button>
+        </div>
+        <div class="map-hint">📌 Click the map to pin, drag the marker, or search below. This will set the merchant store location.</div>
+        <div id="merchantAddressPickerMap"></div>
+        <div class="map-modal-foot">
+          <input type="text" id="merchantAddrSearchInput" placeholder="Search address… (press Enter)" onkeydown="if(event.key==='Enter')searchMerchantAddr()">
+          <button class="btn-my-loc" onclick="useMyLocationMerchant()">📍 My Location</button>
+          <button class="btn-confirm-loc" onclick="confirmMerchantAddress()">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+
+<script>
+const API = '../api/';
+let allMerchants = [], allEmployees = [], allRiders = [], allCustomers = [];
+let allReports = [], currentReportTab = 'pending';
+
+async function api(path, opts = {}) {
+  try {
+    const isForm = opts.body instanceof FormData;
+    const r = await fetch(API + path, { headers: isForm ? {} : { 'Content-Type': 'application/json' }, ...opts });
+    return await r.json();
+  } catch(e) { return { ok: false, error: e.message }; }
+}
+
+// ── Init ───────────────────────────────────────
+(async () => {
+  const me = await api('auth/?action=me');
+  if (!me.ok || me.data.role !== 'admin') { window.location.href = '../login.html'; return; }
+  const name = me.data.name || 'Admin';
+  document.getElementById('adminAvatar').textContent = name[0].toUpperCase();
+  document.getElementById('adminNameLabel').textContent = name;
+  await loadAll();
+})();
+
+async function loadAll() {
+  await Promise.all([loadStats(), loadMerchants(), loadEmployees(), loadRiders(), loadCustomers(), loadReports()]);
+}
+
+// ── Stats ──────────────────────────────────────
+async function loadStats() {
+  const d = await api('admin/stats.php');
+  if (!d.ok) return;
+  const s = d.data;
+  document.getElementById('cntMerchants').textContent = s.merchants;
+  document.getElementById('cntEmployees').textContent = s.employees;
+  document.getElementById('cntRiders').textContent    = s.riders;
+  document.getElementById('cntCustomers').textContent = s.customers;
+}
+
+// ── Merchants ──────────────────────────────────
+async function loadMerchants() {
+  const d = await api('merchants/');
+  allMerchants = d.data || [];
+  document.getElementById('merchantCount').textContent = allMerchants.length;
+
+  // Populate employee merchant select — only show merchants with no employee assigned
+  rebuildMerchantSelect();
+
+  document.getElementById('merchantsBody').innerHTML = allMerchants.map(m => {
+    const emp = allEmployees.find(e => String(e.merchant_id) === String(m.id));
+    return '<tr>' +
+      '<td>' + (m.image_path
+        ? '<img src="../' + m.image_path + '" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">'
+        : '<div style="width:40px;height:40px;border-radius:8px;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:18px;">🏪</div>') + '</td>' +
+      '<td><strong>' + esc(m.name) + '</strong></td>' +
+      '<td>' + esc(m.address || '—') + '</td>' +
+      '<td>' + esc(m.contact || '—') + '</td>' +
+      '<td>' + (emp ? '<span class="badge badge-blue">' + esc(emp.fname + ' ' + emp.lname) + '</span>' : '<span style="color:var(--ink-soft);font-size:13px;">None assigned</span>') + '</td>' +
+      '<td><div class="user-row-actions">' +
+        '<button class="btn btn-sm btn-secondary" onclick="editMerchant(' + m.id + ')">✏️ Edit</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="deleteMerchant(' + m.id + ')">🗑️ Delete</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-soft);">No merchants yet.</td></tr>';
+}
+
+function rebuildMerchantSelect(excludeEmployeeId = null) {
+  const sel = document.getElementById('eMerchant');
+  const currentVal = sel.value;
+  // When adding new employee, only show merchants with no employee assigned
+  const occupiedMerchantIds = allEmployees
+    .filter(e => String(e.id) !== String(excludeEmployeeId))
+    .map(e => String(e.merchant_id));
+
+  sel.innerHTML = '<option value="">Select merchant…</option>' + allMerchants.map(m => {
+    const isOccupied = occupiedMerchantIds.includes(String(m.id));
+    return '<option value="' + m.id + '"' + (isOccupied ? ' disabled style="color:var(--stone-dark)"' : '') + '>' +
+      esc(m.name) + (isOccupied ? ' (occupied)' : '') + '</option>';
+  }).join('');
+  if (currentVal) sel.value = currentVal;
+}
+
+function openMerchantModal() {
+  document.getElementById('editMerchantId').value = '';
+  document.getElementById('merchantModalTitle').textContent = 'Add Merchant';
+  ['mName', 'mAddressVal', 'mContact'].forEach(x => document.getElementById(x).value = '');
+  document.getElementById('mAddressDisplay').textContent = 'Click to pin the store location on map';
+  document.getElementById('mAddressPicker').classList.remove('has-value');
+  document.getElementById('mImgPreview').innerHTML = '🏪';
+  document.getElementById('mImgInput').value = '';
+  document.getElementById('mLatitude').value = '';
+  document.getElementById('mLongitude').value = '';
+  document.getElementById('merchantModal').classList.add('open');
+}
+
+async function editMerchant(id) {
+  const m = allMerchants.find(x => x.id == id); if (!m) return;
+  document.getElementById('editMerchantId').value = id;
+  document.getElementById('merchantModalTitle').textContent = 'Edit Merchant';
+  document.getElementById('mName').value    = m.name    || '';
+  document.getElementById('mAddressVal').value = m.address || '';
+  const display = document.getElementById('mAddressDisplay');
+  if (m.address) { display.textContent = m.address.length>80 ? m.address.slice(0,80)+'…' : m.address; document.getElementById('mAddressPicker').classList.add('has-value'); }
+  else { display.textContent = 'Click to pin the store location on map'; document.getElementById('mAddressPicker').classList.remove('has-value'); }
+  document.getElementById('mContact').value = m.contact || '';
+  document.getElementById('mImgPreview').innerHTML = m.image_path
+    ? '<img src="../' + m.image_path + '" style="width:100%;height:100%;object-fit:cover;">'
+    : '🏪';
+  // clear any leftover selected file to avoid accidental reuse
+  try { document.getElementById('mImgInput').value = ''; } catch(e){}
+  // set lat/lng if available
+  document.getElementById('mLatitude').value = m.latitude ?? '';
+  document.getElementById('mLongitude').value = m.longitude ?? '';
+  if (m.latitude && m.longitude) setMerchantMarker(parseFloat(m.latitude), parseFloat(m.longitude), true);
+  document.getElementById('merchantModal').classList.add('open');
+}
+
+async function saveMerchant() {
+  const id   = document.getElementById('editMerchantId').value;
+  const name = document.getElementById('mName').value.trim();
+  const addr = document.getElementById('mAddressVal').value.trim();
+  if (!name) return showToast('Name required', 'error');
+
+  // Duplicate check: same name AND same address (different address = allowed for branches)
+  const dup = allMerchants.find(m =>
+    String(m.id) !== String(id) &&
+    m.name.toLowerCase() === name.toLowerCase() &&
+    (m.address || '').toLowerCase() === addr.toLowerCase()
+  );
+  if (dup) return showToast('A merchant with this exact name and address already exists.', 'error');
+
+  const contact = document.getElementById('mContact').value.trim();
+  if (!contact) return showToast('Contact is required and must be a valid 10-digit Philippine mobile number', 'error');
+  if (!/^[0-9]{10}$/.test(contact)) return showToast('Contact must contain exactly 10 digits with no letters or special characters', 'error');
+  if (!isValidPHMobile(contact)) return showToast('Contact must be a Philippine mobile number starting with 9', 'error');
+  if (isDuplicateMerchantContact(contact, id)) return showToast('Contact number is already used by another merchant', 'error');
+  const form = new FormData();
+  form.append('name',    name);
+  form.append('address', addr);
+  form.append('contact', contact);
+  const lat = document.getElementById('mLatitude').value;
+  const lng = document.getElementById('mLongitude').value;
+  if (!lat || !lng) return showToast('Please pick the store location on the map', 'error');
+  form.append('latitude', lat);
+  form.append('longitude', lng);
+  if (id) form.append('id', id);
+  const imgFile = document.getElementById('mImgInput').files[0];
+  if (imgFile) form.append('image', imgFile);
+
+  const url = id ? 'merchants/?id=' + id : 'merchants/';
+  const r   = await fetch(API + url, { method: 'POST', body: form });
+  const d   = await r.json();
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  showToast(id ? 'Merchant updated ✓' : 'Merchant added ✓', 'success');
+  closeModal('merchantModal');
+  // clear file input after successful save to avoid carrying selection into next edit
+  try { document.getElementById('mImgInput').value = ''; } catch(e){}
+  await loadMerchants();
+  await loadStats();
+}
+
+async function deleteMerchant(id) {
+  const m = allMerchants.find(x => x.id == id);
+  if (!confirm('Delete merchant "' + (m ? m.name : id) + '" and all their products? This cannot be undone.')) return;
+  const d = await api('merchants/?id=' + id, { method: 'DELETE' });
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  showToast('Merchant deleted ✓', 'success');
+  await loadMerchants();
+  await loadStats();
+}
+
+// ── Employees ──────────────────────────────────
+async function loadEmployees() {
+  const d = await api('employees/');
+  allEmployees = d.data || [];
+  document.getElementById('employeeCount').textContent = allEmployees.length;
+  renderEmployeeTable();
+}
+
+function renderEmployeeTable() {
+  document.getElementById('employeesBody').innerHTML = allEmployees.map(e =>
+    '<tr>' +
+    '<td><strong>' + esc(e.fname + ' ' + e.lname) + '</strong></td>' +
+    '<td><small style="color:var(--ink-soft);">' + esc(e.email || '') + '</small></td>' +
+    '<td>' + esc(e.position || '—') + '</td>' +
+    '<td>' + esc(e.merchant_name || '—') + '</td>' +
+    '<td>' + (e.status === 'active'
+      ? '<span class="status-active-badge">Active</span>'
+      : '<span class="status-inactive-badge">Inactive</span>') + '</td>' +
+    '<td><span class="badge ' + (e.force_password_change ? 'badge-yellow' : 'badge-gray') + '">' +
+      (e.force_password_change ? 'Must change' : 'Set') + '</span></td>' +
+    '<td><div class="user-row-actions">' +
+      '<button class="btn btn-sm btn-secondary" onclick="editEmployee(' + e.id + ')">✏️ Edit</button>' +
+      '<button class="btn btn-sm btn-secondary" onclick="openResetPw(' + e.id + ',\'' + jsEscape(e.fname + ' ' + e.lname) + '\')">🔑 PW</button>' +
+      (e.status === 'active'
+        ? '<button class="btn btn-sm btn-danger" onclick="setUserStatus(' + e.id + ',\'employee\',\'inactive\')">🚫 Deactivate</button>'
+        : '<button class="btn btn-sm btn-accent" onclick="setUserStatus(' + e.id + ',\'employee\',\'active\')">✅ Activate</button>') +
+      '<button class="btn btn-sm btn-danger" onclick="deleteUser(' + e.id + ',\'employee\')">🗑️ Delete</button>' +
+    '</div></td>' +
+    '</tr>'
+  ).join('') || '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-soft);">No employees.</td></tr>';
+}
+
+function openEmployeeModal() {
+  document.getElementById('editEmployeeId').value = '';
+  document.getElementById('employeeModalTitle').textContent = 'Add Employee';
+  document.getElementById('saveEmployeeBtn').textContent = 'Create Employee';
+  document.getElementById('ePassGroup').style.display = 'block';
+  ['eFName', 'eLName', 'eEmail', 'ePass', 'ePosition', 'ePhone'].forEach(id => document.getElementById(id).value = '');
+  handlePhoneInput(document.getElementById('ePhone'));
+  document.getElementById('merchantAssignWarning').style.display = 'none';
+  rebuildMerchantSelect();
+  document.getElementById('eMerchant').value = '';
+  document.getElementById('employeeModal').classList.add('open');
+}
+
+// ── Merchant Map Helpers (inline map removed) ──────────────────────
+let merchantGeocodeTimer = null;
+function debouncedGeocode(delay = 700) {
+  clearTimeout(merchantGeocodeTimer);
+  merchantGeocodeTimer = setTimeout(() => {
+    geocodeMerchantAddress();
+  }, delay);
+}
+
+function setMerchantMarker(lat, lng, center = true) {
+  // store coordinates
+  document.getElementById('mLatitude').value = lat;
+  document.getElementById('mLongitude').value = lng;
+  // if the modal map is present, update its marker and view
+  try {
+    if (merchantAddrMarker && merchantAddrMap) {
+      merchantAddrMarker.setLatLng([lat, lng]);
+      if (center) merchantAddrMap.setView([lat, lng], 15);
+    }
+  } catch (e) { /* ignore if modal not initialized */ }
+}
+
+async function geocodeMerchantAddress() {
+  let q = document.getElementById('mAddressVal').value.trim();
+  if (!q) return;
+  // normalize common shorthand
+  q = q.replace(/\bcor\.?\b/gi, 'corner');
+  q = q.replace(/\s+/g, ' ').trim();
+  // helper to attempt search with optional suffix
+  async function attempt(qstr) {
+    const url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(qstr) + '&format=json&limit=1&countrycodes=ph&accept-language=en';
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': 'MetroMart/1.0 (local)' } });
+      const d = await r.json();
+      if (d && d.length) return d[0];
+    } catch (_) {}
+    return null;
+  }
+
+  let res = await attempt(q);
+  if (!res) {
+    // try stronger context
+    res = await attempt(q + ', Cebu City, Philippines');
+  }
+  if (!res && /,/.test(q)) {
+    // try replacing commas with spaces
+    res = await attempt(q.replace(/,/g, ' '));
+  }
+
+  if (res) {
+    const lat = parseFloat(res.lat), lng = parseFloat(res.lon);
+    setMerchantMarker(lat, lng, true);
+    showToast('Address located on map — adjust pin if needed', 'success');
+  } else {
+    showToast('Could not find coordinates for that address; try editing to a more specific local landmark', 'error');
+  }
+}
+
+// ── Merchant address picker modal (register-style) ─────────────────
+let merchantAddrMap = null, merchantAddrMarker = null;
+let mPickedLat = 10.3157, mPickedLng = 123.8854, mPickedAddr = '';
+function openMerchantAddressModal() {
+  // initialize with current values if present
+  const latVal = document.getElementById('mLatitude').value;
+  const lngVal = document.getElementById('mLongitude').value;
+  const addrVal = document.getElementById('mAddressVal').value;
+  if (latVal && lngVal) { mPickedLat = parseFloat(latVal); mPickedLng = parseFloat(lngVal); }
+  if (addrVal) mPickedAddr = addrVal;
+  document.getElementById('merchantAddressModal').classList.add('open');
+  setTimeout(() => {
+    if (!merchantAddrMap) {
+      merchantAddrMap = L.map('merchantAddressPickerMap').setView([mPickedLat, mPickedLng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(merchantAddrMap);
+      const pin = L.divIcon({className:'',html:'<div style="font-size:32px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))">📍</div>',iconAnchor:[16,32],iconSize:[32,32]});
+      merchantAddrMarker = L.marker([mPickedLat, mPickedLng], { icon: pin, draggable: true }).addTo(merchantAddrMap);
+      merchantAddrMap.on('click', e => { merchantAddrMarker.setLatLng(e.latlng); mPickedLat = e.latlng.lat; mPickedLng = e.latlng.lng; revGeocodeMerchant(mPickedLat, mPickedLng); });
+      merchantAddrMarker.on('dragend', e => { const ll = e.target.getLatLng(); mPickedLat = ll.lat; mPickedLng = ll.lng; revGeocodeMerchant(mPickedLat, mPickedLng); });
+    } else { merchantAddrMap.invalidateSize(); if (merchantAddrMarker) { merchantAddrMarker.setLatLng([mPickedLat, mPickedLng]); merchantAddrMap.setView([mPickedLat, mPickedLng], 13); } }
+    if (mPickedAddr) document.getElementById('merchantAddrSearchInput').value = mPickedAddr;
+  }, 200);
+}
+
+async function revGeocodeMerchant(lat, lng) {
+  try { const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`); const d = await r.json(); mPickedAddr = d.display_name || `${lat.toFixed(5)},${lng.toFixed(5)}`; }
+  catch { mPickedAddr = `${lat.toFixed(5)},${lng.toFixed(5)}`; }
+  document.getElementById('merchantAddrSearchInput').value = mPickedAddr;
+}
+
+async function searchMerchantAddr() {
+  const q = document.getElementById('merchantAddrSearchInput').value.trim(); if (!q) return;
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=1&countrycodes=ph&accept-language=en');
+    const d = await r.json(); if (!d.length) { alert('Address not found.'); return; }
+    mPickedLat = parseFloat(d[0].lat); mPickedLng = parseFloat(d[0].lon); mPickedAddr = d[0].display_name;
+    merchantAddrMap.setView([mPickedLat, mPickedLng], 16); merchantAddrMarker.setLatLng([mPickedLat, mPickedLng]);
+    document.getElementById('merchantAddrSearchInput').value = mPickedAddr;
+  } catch { alert('Search failed.'); }
+}
+
+function useMyLocationMerchant() {
+  if (!navigator.geolocation) { alert('Geolocation not supported.'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    mPickedLat = pos.coords.latitude; mPickedLng = pos.coords.longitude;
+    merchantAddrMap.setView([mPickedLat, mPickedLng], 16); merchantAddrMarker.setLatLng([mPickedLat, mPickedLng]);
+    revGeocodeMerchant(mPickedLat, mPickedLng);
+  }, () => alert('Could not get location.'));
+}
+
+function confirmMerchantAddress() {
+  if (!mPickedAddr) { alert('Please pick a location on the map first.'); return; }
+  document.getElementById('mAddressVal').value = mPickedAddr;
+  document.getElementById('mLatitude').value = mPickedLat;
+  document.getElementById('mLongitude').value = mPickedLng;
+  const display = document.getElementById('mAddressDisplay');
+  display.textContent = mPickedAddr.length > 80 ? mPickedAddr.slice(0,80) + '…' : mPickedAddr;
+  display.className = '';
+  document.getElementById('mAddressPicker').classList.add('has-value');
+  document.getElementById('merchantAddressModal').classList.remove('open');
+}
+
+function closeMerchantAddressModal() { document.getElementById('merchantAddressModal').classList.remove('open'); }
+
+
+async function editEmployee(id) {
+  // Try cached list first
+  const list = (await api('employees/')).data || [];
+  let e = list.find(x => x.id == id);
+  // Fallback: fetch single employee from server if not in cache
+  if (!e) {
+    const res = await api('employees/?id=' + encodeURIComponent(id));
+    if (!res.ok) return showToast(res.error || 'Employee not found', 'error');
+    e = res.data;
+  }
+
+  document.getElementById('editEmployeeId').value = id;
+  document.getElementById('employeeModalTitle').textContent = 'Edit Employee';
+  document.getElementById('saveEmployeeBtn').textContent = 'Update Employee';
+  document.getElementById('ePassGroup').style.display = 'none';
+  document.getElementById('eFName').value    = e.fname      || '';
+  document.getElementById('eLName').value    = e.lname      || '';
+  document.getElementById('eEmail').value    = e.email      || '';
+  document.getElementById('ePosition').value = e.position   || '';
+  document.getElementById('ePhone').value    = e.phone      || '';
+  handlePhoneInput(document.getElementById('ePhone'));
+  document.getElementById('merchantAssignWarning').style.display = 'none';
+  rebuildMerchantSelect(id); // exclude this employee so their merchant shows enabled
+  document.getElementById('eMerchant').value = e.merchant_id || '';
+  document.getElementById('employeeModal').classList.add('open');
+}
+
+async function saveEmployee() {
+  const id      = document.getElementById('editEmployeeId').value;
+  const pass    = document.getElementById('ePass').value;
+  const mId     = document.getElementById('eMerchant').value;
+  const fname   = document.getElementById('eFName').value.trim();
+  const lname   = document.getElementById('eLName').value.trim();
+  const email   = document.getElementById('eEmail').value.trim();
+
+  if (!fname || !lname || !email) return showToast('Name and email are required', 'error');
+  if (!mId) return showToast('Please select a merchant', 'error');
+  if (!id && pass.length < 8) return showToast('Password must be at least 8 characters', 'error');
+
+  // Enforce: merchant can only have 1 employee
+  const merchantAlreadyHasEmployee = allEmployees.find(e =>
+    String(e.merchant_id) === String(mId) && String(e.id) !== String(id)
+  );
+  if (merchantAlreadyHasEmployee) {
+    const warn = document.getElementById('merchantAssignWarning');
+    warn.textContent = 'This merchant already has an employee assigned (' + esc(merchantAlreadyHasEmployee.fname + ' ' + merchantAlreadyHasEmployee.lname) + '). Each merchant can only have 1 employee.';
+    warn.style.display = 'block';
+    return;
+  }
+
+  const phone = document.getElementById('ePhone').value.trim();
+  if (phone && !isValidPHMobile(phone)) return showToast('Phone must be 10 digits starting with 9 (Philippine mobile number)', 'error');
+  if (phone && isDuplicateEmployeePhone(phone, id)) return showToast('Phone number is already used by another employee', 'error');
+  const body = { id, fname, lname, email, password: pass, position: document.getElementById('ePosition').value.trim(), phone, merchant_id: mId };
+  const url  = id ? 'employees/?id=' + id : 'employees/';
+  const d    = await api(url, { method: 'POST', body: JSON.stringify(body) });
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  showToast(id ? 'Employee updated ✓' : 'Employee created ✓ — they must change password on first login', 'success');
+  closeModal('employeeModal');
+  await loadEmployees();
+  await loadMerchants(); // refresh merchant table to show assignment
+}
+
+// ── Riders ─────────────────────────────────────
+async function loadRiders() {
+  const d = await api('riders/');
+  allRiders = d.data || [];
+  document.getElementById('riderCount').textContent = allRiders.length;
+  renderRiderTable();
+}
+
+function renderRiderTable() {
+  document.getElementById('ridersBody').innerHTML = allRiders.map(r =>
+    '<tr>' +
+    '<td><strong>' + esc(r.fname + ' ' + r.lname) + '</strong></td>' +
+    '<td><small style="color:var(--ink-soft);">' + esc(r.email || '') + '</small></td>' +
+    '<td>' + esc(r.phone || '—') + '</td>' +
+    '<td>' + esc(r.vehicle_type || '—') + '</td>' +
+    '<td>' + (r.status === 'active'
+      ? '<span class="status-active-badge">Active</span>'
+      : '<span class="status-inactive-badge">Inactive</span>') + '</td>' +
+    '<td><span class="badge ' + (r.force_password_change ? 'badge-yellow' : 'badge-gray') + '">' + (r.force_password_change ? 'Must change' : 'Set') + '</span></td>' +
+    '<td><div class="user-row-actions">' +
+      '<button class="btn btn-sm btn-secondary" onclick="editRider(' + r.id + ')">✏️ Edit</button>' +
+      '<button class="btn btn-sm btn-secondary" onclick="openResetPw(' + r.id + ',\'' + esc(r.fname + ' ' + r.lname) + '\')">🔑 PW</button>' +
+      (r.status === 'active'
+        ? '<button class="btn btn-sm btn-danger" onclick="setUserStatus(' + r.id + ',\'rider\',\'inactive\')">🚫 Deactivate</button>'
+        : '<button class="btn btn-sm btn-accent" onclick="setUserStatus(' + r.id + ',\'rider\',\'active\')">✅ Activate</button>') +
+      '<button class="btn btn-sm btn-danger" onclick="deleteUser(' + r.id + ',\'rider\')">🗑️ Delete</button>' +
+    '</div></td>' +
+    '</tr>'
+  ).join('') || '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--ink-soft);">No riders.</td></tr>';
+}
+
+function openRiderModal() {
+  document.getElementById('editRiderId').value = '';
+  document.getElementById('riderModalTitle').textContent = 'Add Rider';
+  document.getElementById('saveRiderBtn').textContent = 'Create Rider';
+  document.getElementById('rPassGroup').style.display = 'block';
+  ['rFName', 'rLName', 'rEmail', 'rPass', 'rPhone'].forEach(id => document.getElementById(id).value = '');
+  handlePhoneInput(document.getElementById('rPhone'));
+  document.getElementById('rVehicle').value = 'motorcycle';
+  document.getElementById('riderModal').classList.add('open');
+}
+
+async function editRider(id) {
+  const r = allRiders.find(x => x.id == id); if (!r) return;
+  document.getElementById('editRiderId').value = id;
+  document.getElementById('riderModalTitle').textContent = 'Edit Rider';
+  document.getElementById('saveRiderBtn').textContent = 'Update Rider';
+  document.getElementById('rPassGroup').style.display = 'none';
+  document.getElementById('rFName').value   = r.fname        || '';
+  document.getElementById('rLName').value   = r.lname        || '';
+  document.getElementById('rEmail').value   = r.email        || '';
+  document.getElementById('rPhone').value   = r.phone        || '';
+  handlePhoneInput(document.getElementById('rPhone'));
+  document.getElementById('rVehicle').value = r.vehicle_type || 'motorcycle';
+  document.getElementById('riderModal').classList.add('open');
+}
+
+async function saveRider() {
+  const id    = document.getElementById('editRiderId').value;
+  const fname = document.getElementById('rFName').value.trim();
+  const lname = document.getElementById('rLName').value.trim();
+  const email = document.getElementById('rEmail').value.trim();
+  const pass  = document.getElementById('rPass').value;
+  if (!fname || !lname || !email) return showToast('First name, last name, and email are required', 'error');
+  if (!validateEmail(email)) return showToast('Enter a valid email address', 'error');
+  if (!id && pass.length < 8) return showToast('Password must be at least 8 characters', 'error');
+  const phone = document.getElementById('rPhone').value.trim();
+  if (phone && !isValidPHMobile(phone)) return showToast('Phone must be 10 digits starting with 9 (Philippine mobile number)', 'error');
+  if (phone && isDuplicateRiderPhone(phone, id)) return showToast('Phone number is already used by another rider', 'error');
+  const body = { id, fname: document.getElementById('rFName').value.trim(), lname: document.getElementById('rLName').value.trim(), email: document.getElementById('rEmail').value.trim(), password: pass, phone, vehicle_type: document.getElementById('rVehicle').value };
+  const url  = id ? 'riders/?id=' + id : 'riders/';
+  const d    = await api(url, { method: 'POST', body: JSON.stringify(body) });
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  showToast(id ? 'Rider updated ✓' : 'Rider created ✓ — they must change password on first login', 'success');
+  closeModal('riderModal');
+  await loadRiders();
+}
+
+// ── Customers ──────────────────────────────────
+async function loadCustomers() {
+  const d = await api('customers/');
+  allCustomers = d.data || [];
+  document.getElementById('customerCount').textContent = allCustomers.length;
+  renderCustomerTable();
+}
+
+function renderCustomerTable() {
+  document.getElementById('customersBody').innerHTML = allCustomers.map(c =>
+    '<tr>' +
+    '<td><strong>' + esc(c.fname + ' ' + c.lname) + '</strong></td>' +
+    '<td>' + esc(c.email || '—') + '</td>' +
+    '<td>' + esc(c.phone || '—') + '</td>' +
+    '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">' + esc(c.address || '—') + '</td>' +
+    '<td>' + (c.status === 'active'
+      ? '<span class="status-active-badge">Active</span>'
+      : '<span class="status-inactive-badge">Inactive</span>') + '</td>' +
+    '<td><div class="user-row-actions">' +
+      (c.status === 'active'
+        ? '<button class="btn btn-sm btn-danger" onclick="setUserStatus(' + c.id + ',\'customer\',\'inactive\')">🚫 Deactivate</button>'
+        : '<button class="btn btn-sm btn-accent" onclick="setUserStatus(' + c.id + ',\'customer\',\'active\')">✅ Activate</button>') +
+      '<button class="btn btn-sm btn-danger" onclick="deleteUser(' + c.id + ',\'customer\')">🗑️ Delete</button>' +
+    '</div></td>' +
+    '</tr>'
+  ).join('') || '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-soft);">No customers.</td></tr>';
+}
+
+// ── FIXED: User status toggle & Delete ─────────────────────────
+async function setUserStatus(userId, role, newStatus) {
+  const label = newStatus === 'active' ? 'Activate' : 'Deactivate';
+  if (!confirm(label + ` this ${role} account? ${newStatus === 'inactive' ? '(They will not be able to login)' : ''}`)) return;
+
+  const d = await api('auth/?action=set_user_status', { 
+    method: 'POST', 
+    body: JSON.stringify({ user_id: userId, role: role, status: newStatus }) 
+  });
+
+  if (!d.ok) return showToast(d.error || 'Failed to update status', 'error');
+  
+  showToast(`${role} account ${newStatus === 'active' ? 'activated' : 'deactivated'} ✓`, 'success');
+  await loadAll(); // Refresh all data
+}
+
+async function deleteUser(userId, role) {
+  if (!confirm(`Permanently delete this ${role} account and all related data? This cannot be undone.`)) return;
+  
+  const d = await api('auth/?action=delete_user', { 
+    method: 'POST', 
+    body: JSON.stringify({ user_id: userId, role: role }) 
+  });
+
+  if (!d.ok) return showToast(d.error || `Failed to delete ${role}`, 'error');
+  
+  showToast(`${role.charAt(0).toUpperCase() + role.slice(1)} account deleted ✓`, 'success');
+  await loadAll(); // Refresh all data
+}
+
+// ── Reset password ─────────────────────────────
+function openResetPw(userId, name) {
+  document.getElementById('resetPwUserId').value = userId;
+  document.getElementById('resetPwName').textContent = name;
+  document.getElementById('newPwInput').value = '';
+  document.getElementById('confirmPwInput').value = '';
+  document.getElementById('resetPwModal').classList.add('open');
+}
+
+async function doResetPassword() {
+  const uid  = document.getElementById('resetPwUserId').value;
+  const pw   = document.getElementById('newPwInput').value;
+  const conf = document.getElementById('confirmPwInput').value;
+  if (pw.length < 8) return showToast('Password must be at least 8 characters', 'error');
+  if (pw !== conf)   return showToast('Passwords do not match', 'error');
+  const d = await api('auth/?action=admin_reset_password', { method: 'POST', body: JSON.stringify({ user_id: uid, new_password: pw }) });
+  if (!d.ok) return showToast(d.error || 'Reset failed', 'error');
+  showToast('Password reset ✓ — user must change it on next login', 'success');
+  closeModal('resetPwModal');
+}
+
+// ── Reports ────────────────────────────────────
+async function loadReports() {
+  const d = await api('report/reports.php');
+  allReports = d.data || [];
+  const pending = allReports.filter(r => r.status === 'pending').length;
+  const badge = document.getElementById('reportsBadge');
+  badge.style.display = pending > 0 ? 'inline-block' : 'none';
+  badge.textContent = pending;
+  renderReports();
+}
+
+function setReportTab(tab, btn) {
+  currentReportTab = tab;
+  document.querySelectorAll('#reportTabBar .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderReports();
+}
+
+function renderReports() {
+  const list = currentReportTab === 'all' ? allReports : allReports.filter(r => r.status === currentReportTab);
+  if (!list.length) { 
+    document.getElementById('reportsContainer').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><h4>No reports found</h4></div>'; 
+    return; 
+  }
+  const reasonLabels = { fake_address: 'Fake Address', no_answer: 'No Answer', refused_delivery: 'Refused Delivery', fraud: 'Fraud', other: 'Other' };
+  document.getElementById('reportsContainer').innerHTML = list.map(r =>
+    '<div class="report-card">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
+      '<div>' +
+        '<span class="report-type" style="background:#fef3c7;color:#d97706;">' + esc(reasonLabels[r.reason] || r.reason) + '</span>' +
+        '<div style="font-size:13px;color:var(--ink-soft);margin-top:6px;">Filed by rider: <strong>' + esc(r.reporter_name || '—') + '</strong></div>' +
+        '<div style="font-size:13px;color:var(--ink-soft);">Against customer: <strong>' + esc(r.customer_name || '—') + '</strong></div>' +
+        (r.order_id ? '<div style="font-size:12px;color:var(--ink-soft);">Order #' + String(r.order_id).padStart(6, '0') + '</div>' : '') +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        '<span class="badge ' + (r.status === 'pending' ? 'badge-yellow' : r.status === 'reviewed' ? 'badge-green' : 'badge-red') + '">' + r.status + '</span>' +
+        '<div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">' + new Date(r.created_at).toLocaleDateString('en-PH') + '</div>' +
+      '</div>' +
+    '</div>' +
+    (r.details ? '<div style="font-size:13px;background:var(--stone);border-radius:8px;padding:10px 12px;">' + esc(r.details) + '</div>' : '') +
+    (r.customer_reply ? '<div style="font-size:13px;background:rgba(237,242,255,1);border-radius:8px;padding:10px 12px;margin-top:10px;">' +
+      '<strong>Customer reply:</strong><div style="margin-top:6px;color:var(--ink);">' + esc(r.customer_reply) + '</div>' +
+      (r.customer_replied_at ? '<div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">Replied ' + new Date(r.customer_replied_at).toLocaleString('en-PH') + '</div>' : '') +
+    '</div>' : '') +
+    (r.status === 'pending' ?
+      '<div style="display:flex;gap:8px;margin-top:12px;">' +
+        '<button class="btn btn-sm btn-danger" onclick="reviewReport(' + r.id + ',\'reviewed\',' + r.customer_id + ')">⚠️ Take Action & Deactivate Customer</button>' +
+        '<button class="btn btn-sm btn-secondary" onclick="reviewReport(' + r.id + ',\'dismissed\',0)">Dismiss</button>' +
+      '</div>' : '') +
+    '</div>'
+  ).join('');
+}
+
+async function reviewReport(id, status, customerId) {
+  if (status === 'reviewed') {
+    if (!confirm('This will deactivate the customer account. Proceed?')) return;
+    await setUserStatus(customerId, 'customer', 'inactive');
+  }
+  const d = await api('report/reports.php', { method: 'POST', body: JSON.stringify({ report_id: id, status }) });
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  showToast(status === 'reviewed' ? 'Action taken — customer deactivated' : 'Report dismissed', 'success');
+  await loadReports();
+}
+
+// ── Global search ──────────────────────────────
+function handleGlobalSearch() {
+  const q = document.getElementById('globalSearch').value.toLowerCase().trim();
+  if (!q) return;
+  // Push query to whichever tab is active
+  const activeTab = document.querySelector('.nav-item.active')?.id?.replace('nav-', '');
+  const searchMap = {
+    merchants: { inputId: 'merchantSearch', bodyId: 'merchantsBody', cols: [1,2,3] },
+    employees: { inputId: 'employeeSearch', bodyId: 'employeesBody', cols: [0,3] },
+    riders:    { inputId: 'riderSearch',    bodyId: 'ridersBody',    cols: [0,1] },
+    customers: { inputId: 'customerSearch', bodyId: 'customersBody', cols: [0,1,2] },
+  };
+  const config = searchMap[activeTab];
+  if (config) {
+    const inp = document.getElementById(config.inputId);
+    if (inp) { inp.value = q; filterTable(config.bodyId, q, config.cols); }
+  }
+}
+
+// ── Helpers ────────────────────────────────────
+function previewImg(inputId, previewId) {
+  const file = document.getElementById(inputId).files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => { document.getElementById(previewId).innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">'; };
+  r.readAsDataURL(file);
+}
+
+function showPwMini(pw, barId) {
+  let score = 0;
+  if (pw.length >= 8)  score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const cols = ['#ef4444','#f97316','#eab308','#22c55e','#16a34a'];
+  const pcts = ['20%','40%','60%','80%','100%'];
+  const idx  = Math.min(score, 4);
+  const bar  = document.getElementById(barId);
+  if (bar) { bar.style.width = pcts[idx]; bar.style.background = cols[idx]; }
+}
+
+function filterTable(tbodyId, query, colIndexes) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('#' + tbodyId + ' tr').forEach(tr => {
+    const text = colIndexes.map(i => tr.cells[i]?.textContent || '').join(' ').toLowerCase();
+    tr.style.display = !q || text.includes(q) ? '' : 'none';
+  });
+}
+
+function showTab(tab) {
+  ['overview','merchants','employees','riders','customers','reports'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('nav-' + t)?.classList.toggle('active', t === tab);
+  });
+  if (tab === 'reports') loadReports();
+  if (tab === 'merchants') loadMerchants();
+  if (tab === 'employees') loadEmployees();
+}
+
+async function doLogout() { await fetch(API + 'auth/?action=logout', { method: 'POST' }); window.location.href = '../login.html'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); }));
+function handlePhoneInput(input) {
+  const digits = input.value.replace(/\D/g,'').slice(0,10);
+  if (input.value !== digits) input.value = digits;
+  const hint = document.getElementById(input.id + 'Hint');
+  if (!hint) return;
+  if (!digits) {
+    hint.textContent = 'Philippine number — 10 digits starting with 9 (e.g. 9171234567)';
+    hint.style.color = 'var(--ink-soft)';
+    return;
+  }
+  if (!digits.startsWith('9')) {
+    hint.textContent = 'Phone number must start with 9 after +63.';
+    hint.style.color = 'var(--red)';
+    return;
+  }
+  if (digits.length < 10) {
+    hint.textContent = 'Enter exactly 10 digits, no letters or symbols.';
+    hint.style.color = 'var(--red)';
+    return;
+  }
+  hint.textContent = '✓ Valid Philippine number: +63 ' + digits;
+  hint.style.color = 'var(--green)';
+}
+
+function normalizePHMobile(raw) {
+  let digits = String(raw || '').replace(/\D/g,'');
+  if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+  if (digits.length === 12 && digits.startsWith('63')) digits = digits.slice(2);
+  return digits;
+}
+
+function isValidPHMobile(raw) {
+  return /^9\d{9}$/.test(normalizePHMobile(raw));
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function jsEscape(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\\'")
+    .replace(/\"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
+}
+
+function isDuplicateMerchantContact(contact, id) {
+  const normalized = normalizePHMobile(contact);
+  if (!normalized) return false;
+  return allMerchants.some(m => String(m.id) !== String(id) && normalizePHMobile(m.contact) === normalized)
+      || allEmployees.some(e => normalizePHMobile(e.phone) === normalized)
+      || allRiders.some(r => normalizePHMobile(r.phone) === normalized)
+      || allCustomers.some(c => normalizePHMobile(c.phone) === normalized);
+}
+
+function isDuplicateEmployeePhone(phone, id) {
+  const normalized = normalizePHMobile(phone);
+  if (!normalized) return false;
+  return allEmployees.some(e => String(e.id) !== String(id) && normalizePHMobile(e.phone) === normalized)
+      || allMerchants.some(m => normalizePHMobile(m.contact) === normalized)
+      || allRiders.some(r => normalizePHMobile(r.phone) === normalized)
+      || allCustomers.some(c => normalizePHMobile(c.phone) === normalized);
+}
+
+function isDuplicateRiderPhone(phone, id) {
+  const normalized = normalizePHMobile(phone);
+  if (!normalized) return false;
+  return allRiders.some(r => String(r.id) !== String(id) && normalizePHMobile(r.phone) === normalized)
+      || allMerchants.some(m => normalizePHMobile(m.contact) === normalized)
+      || allEmployees.some(e => normalizePHMobile(e.phone) === normalized)
+      || allCustomers.some(c => normalizePHMobile(c.phone) === normalized);
+}
+
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'show ' + type; setTimeout(() => t.className = '', 3500); }
+function esc(s) { return String(s || '').replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"'); }
+</script>
+</body>
+</html>

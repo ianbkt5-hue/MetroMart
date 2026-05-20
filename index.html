@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetroMart — Fresh Groceries Delivered</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.min.css">
+<script src="vendor/leaflet/leaflet.min.js"></script>
+<link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">Metro<span class="dot">Mart</span></div>
+
+  <div class="nav-search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="searchInput" type="text" placeholder="Search products or stores…" oninput="handleSearch()">
+  </div>
+
+  <div class="nav-loc" onclick="openLocationModal()" title="Change delivery location">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span id="locationLabel">Cebu City</span>
+  </div>
+
+  <div class="nav-gap"></div>
+
+  <button class="nav-cart" id="cartBtn" onclick="openCartOrLogin()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    Cart
+    <span class="cart-badge" id="cartBadge">0</span>
+  </button>
+
+  <button class="btn-login"  id="loginBtn"  onclick="window.location.href='login.html'">Log in</button>
+  <button class="btn-signup" id="signupBtn" onclick="window.location.href='register.html'">Get started</button>
+</nav>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="home-btn" onclick="showAll()">🏠 Home</div>
+    <div class="sidebar-section-label">Categories</div>
+    <div class="cat-item active" onclick="filterCat(this,'all')"><span class="cat-icon">✦</span> All products</div>
+    <div class="cat-item" onclick="filterCat(this,'grocery')"><span class="cat-icon">🛒</span> Grocery</div>
+    <div class="cat-item" onclick="filterCat(this,'fresh')"><span class="cat-icon">🥦</span> Fresh Produce</div>
+    <div class="cat-item" onclick="filterCat(this,'dairy')"><span class="cat-icon">🥛</span> Dairy & Eggs</div>
+    <div class="cat-item" onclick="filterCat(this,'meat')"><span class="cat-icon">🥩</span> Meat & Seafood</div>
+    <div class="cat-item" onclick="filterCat(this,'bakery')"><span class="cat-icon">🍞</span> Bakery</div>
+    <div class="cat-item" onclick="filterCat(this,'beverages')"><span class="cat-icon">🥤</span> Beverages</div>
+    <div class="cat-item" onclick="filterCat(this,'snacks')"><span class="cat-icon">🍪</span> Snacks</div>
+    <div class="cat-item" onclick="filterCat(this,'household')"><span class="cat-icon">🧹</span> Household</div>
+    <div class="cat-item" onclick="filterCat(this,'personal')"><span class="cat-icon">🧴</span> Personal Care</div>
+    <div class="cat-item" onclick="filterCat(this,'baby')"><span class="cat-icon">👶</span> Baby & Kids</div>
+    <div class="cat-item" onclick="filterCat(this,'pets')"><span class="cat-icon">🐾</span> Pets</div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Auth notice (hidden when logged in) -->
+    <div class="auth-notice" id="loginNotice">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span><a href="login.html">Log in</a> or <a href="register.html">create an account</a> to add items to your cart and place orders.</span>
+    </div>
+
+    <!-- Delivery bar -->
+    <div class="delivery-bar" onclick="openLocationModal()">
+      <div class="delivery-bar-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a7a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="delivery-bar-text">
+        <div class="delivery-bar-label">Delivering to</div>
+        <div class="delivery-bar-addr" id="deliveryAddressBar">Cebu City — tap to change</div>
+      </div>
+      <div class="delivery-bar-cta">Change →</div>
+    </div>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-bg-circle c1"></div>
+      <div class="hero-bg-circle c2"></div>
+      <div class="hero-bg-circle c3"></div>
+      <div class="hero-content">
+        <div class="hero-badge"><span></span> Now delivering in Cebu City</div>
+        <h1 class="hero-title">Fresh <em>groceries,</em><br>at your door.</h1>
+        <p class="hero-sub">Order from your favourite local stores and get everything delivered in 30–60 minutes.</p>
+        <div class="hero-actions">
+          <a href="register.html" class="hero-btn-primary">
+            Start shopping
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </a>
+          <a href="login.html" class="hero-btn-secondary">Log in</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-pill"><div class="pill-icon">🏪</div><div class="pill-num" id="heroStores">—</div><div class="pill-label">Stores</div></div>
+        <div class="hero-pill"><div class="pill-icon">🛍️</div><div class="pill-num" id="heroProducts">—</div><div class="pill-label">Products</div></div>
+        <div class="hero-pill"><div class="pill-icon">🚴</div><div class="pill-num">30<span style="font-size:16px;opacity:.6">min</span></div><div class="pill-label">Avg delivery</div></div>
+        <div class="hero-pill"><div class="pill-icon">⭐</div><div class="pill-num">4.8</div><div class="pill-label">Rating</div></div>
+      </div>
+    </section>
+
+    <!-- Stores -->
+    <section class="stores-section" id="storesSection">
+      <div class="section-row">
+        <h2 class="section-title">Stores near you</h2>
+        <span class="section-link" onclick="window.location.href='pages/customer-dashboard.html'">View all →</span>
+      </div>
+      <div class="stores-scroll" id="storeRow"><div class="empty">Loading stores…</div></div>
+    </section>
+
+    <!-- Products -->
+    <section class="products-section">
+      <div class="section-row">
+        <h2 class="section-title" id="productSectionTitle">Featured products</h2>
+      </div>
+      <div class="product-grid" id="productGrid"><div class="empty" style="grid-column:1/-1">Loading products…</div></div>
+    </section>
+
+    <!-- Promos -->
+    <div class="promo-grid">
+      <div class="promo-card promo-1">
+        <span class="promo-emoji">🚚</span>
+        <div class="promo-tag">Limited offer</div>
+        <div class="promo-title">Free delivery on your first 3 orders</div>
+        <div class="promo-sub">No minimum spend required</div>
+      </div>
+      <div class="promo-card promo-2">
+        <span class="promo-emoji">🛍️</span>
+        <div class="promo-tag">Weekend sale</div>
+        <div class="promo-title">Up to 30% off selected items</div>
+        <div class="promo-sub">Every Saturday and Sunday</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Login Required Modal -->
+<div class="modal-overlay" id="loginModal">
+  <div class="modal-box">
+    <div class="icon">🔒</div>
+    <h3>Login required</h3>
+    <p>Please log in or create a free account to add items to your cart and place orders.</p>
+    <div class="modal-btns">
+      <a href="login.html" class="modal-btn-primary">Log in</a>
+      <button onclick="closeModal('loginModal')" class="modal-btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Location Modal -->
+<div class="modal-overlay" id="locationModal">
+  <div class="map-modal-wrap">
+    <div class="map-modal-head">
+      <h3>Set delivery location</h3>
+      <button class="map-modal-close" onclick="closeModal('locationModal')">✕</button>
+    </div>
+    <div class="map-modal-hint">📌 Click the map to pin your location, drag the marker, or search below.</div>
+    <div id="locationPickerMap"></div>
+    <div class="map-modal-foot">
+      <input type="text" id="locationSearchInput" placeholder="Search an address…" onkeydown="if(event.key==='Enter')searchAddress()">
+      <button class="btn-loc" onclick="useCurrentLocation()">📍 My location</button>
+      <button class="btn-confirm" onclick="confirmLocation()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────
+let currentUser  = null;
+let allProducts  = [];
+let allMerchants = [];
+let locationMap  = null, locationMarker = null;
+let pickedLat    = 10.3157, pickedLng = 123.8854, pickedAddress = 'Cebu City';
+
+// ── Init ───────────────────────────────────────
+(async () => {
+  restoreLocation();
+  try {
+    const r = await fetch('api/auth/?action=me');
+    const d = await r.json();
+    if (d.ok) {
+      currentUser = d.data;
+      document.getElementById('loginNotice').style.display = 'none';
+      document.getElementById('loginBtn').textContent  = 'My account';
+      document.getElementById('loginBtn').onclick      = () => window.location.href = dashboardFor(currentUser.role);
+      document.getElementById('signupBtn').textContent = 'Log out';
+      document.getElementById('signupBtn').style.background  = '#d63b3b';
+      document.getElementById('signupBtn').style.borderColor = '#d63b3b';
+      document.getElementById('signupBtn').onclick = async () => {
+        await fetch('api/auth/?action=logout', { method: 'POST' });
+        location.reload();
+      };
+      const cnt = (JSON.parse(localStorage.getItem('mm_cart') || '[]')).reduce((s,i) => s+i.qty, 0);
+      if (cnt > 0) {
+        const b = document.getElementById('cartBadge');
+        b.textContent = cnt; b.style.display = 'flex';
+      }
+    }
+  } catch(e) {}
+  await Promise.all([loadMerchants(), loadProducts('all')]);
+})();
+
+function dashboardFor(role) {
+  return { admin:'pages/admin-dashboard.html', employee:'pages/employee-dashboard.html',
+           rider:'pages/rider-dashboard.html' }[role] || 'pages/customer-dashboard.html';
+}
+
+// ── Data ───────────────────────────────────────
+async function loadMerchants() {
+  const r = await fetch('api/merchants/');
+  const d = await r.json();
+  allMerchants = d.data || [];
+  document.getElementById('heroStores').textContent = allMerchants.length;
+  renderMerchants(allMerchants);
+}
+
+async function loadProducts(cat = 'all') {
+  const qs = cat === 'all' ? 'limit=24' : `category=${cat}&limit=50`;
+  const r  = await fetch(`api/products/?${qs}`);
+  const d  = await r.json();
+  allProducts = d.data || [];
+  document.getElementById('heroProducts').textContent = allProducts.length + (cat === 'all' ? '+' : '');
+  renderProducts(allProducts);
+}
+
+// ── Render ─────────────────────────────────────
+function renderMerchants(list) {
+  const row = document.getElementById('storeRow');
+  if (!list.length) { row.innerHTML = '<div class="empty">No stores yet.</div>'; return; }
+  row.innerHTML = list.map(m => `
+    <div class="store-card" onclick="window.location.href='pages/customer-dashboard.html?merchant=${m.id}'">
+      <div class="store-img-wrap">
+        ${m.image_path ? `<img src="${m.image_path}" alt="${esc(m.name)}">` : '🏪'}
+      </div>
+      <div class="store-name">${esc(m.name)}</div>
+      <div class="store-addr">📍 ${esc(m.address || '')}</div>
+    </div>`).join('');
+}
+
+function renderProducts(list) {
+  const grid = document.getElementById('productGrid');
+  if (!list.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">No products found.</div>'; return; }
+  grid.innerHTML = list.map(p => {
+    const m = allMerchants.find(x => x.id == p.merchant_id);
+    const available = p.status === 'Available';
+    return `
+      <div class="product-card" onclick="handleProductClick(${p.id})">
+        <div class="product-img-wrap">
+          ${p.image_path ? `<img src="${p.image_path}" alt="${esc(p.name)}">` : '🛍️'}
+        </div>
+        <div class="product-info">
+          <div class="product-name">${esc(p.name)}</div>
+          <div class="product-store">${m ? esc(m.name) : ''}</div>
+          <div class="product-row">
+            <div class="product-price">₱${parseFloat(p.price).toFixed(2)}</div>
+            ${available
+              ? `<button class="btn-add" onclick="event.stopPropagation();addToCart(${p.id})">+</button>`
+              : `<span class="out-of-stock-tag">Out of stock</span>`}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Cart ───────────────────────────────────────
+function addToCart(prodId) {
+  if (!currentUser) { openModal('loginModal'); return; }
+  const p = allProducts.find(x => x.id == prodId); if (!p) return;
+  const cart = JSON.parse(localStorage.getItem('mm_cart') || '[]');
+  const idx  = cart.findIndex(i => i.id == prodId);
+  if (idx > -1) cart[idx].qty++;
+  else cart.push({ id: prodId, name: p.name, price: p.price, qty: 1, merchant_id: p.merchant_id, image_path: p.image_path || null });
+  localStorage.setItem('mm_cart', JSON.stringify(cart));
+  const cnt = cart.reduce((s,i)=>s+i.qty,0);
+  const b   = document.getElementById('cartBadge');
+  b.textContent = cnt; b.style.display = 'flex';
+  showToast('Added to cart ✓', 'green');
+}
+
+function openCartOrLogin() {
+  if (!currentUser) { openModal('loginModal'); return; }
+  window.location.href = 'pages/customer-dashboard.html#cart';
+}
+
+function handleProductClick(id) {
+  if (!currentUser) { openModal('loginModal'); return; }
+  window.location.href = `pages/customer-dashboard.html?product=${id}`;
+}
+
+// ── Filters ────────────────────────────────────
+function filterCat(el, cat) {
+  document.querySelectorAll('.cat-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  const label = cat === 'all' ? 'Featured products' : el.textContent.trim();
+  document.getElementById('productSectionTitle').textContent = label;
+  loadProducts(cat);
+}
+
+function showAll() {
+  document.querySelectorAll('.cat-item').forEach((i,idx) => i.classList.toggle('active', idx===0));
+  document.getElementById('productSectionTitle').textContent = 'Featured products';
+  loadProducts('all');
+}
+
+function handleSearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  if (!q) { renderProducts(allProducts); renderMerchants(allMerchants); return; }
+  renderProducts(allProducts.filter(p => p.name?.toLowerCase().includes(q)));
+  renderMerchants(allMerchants.filter(m => m.name?.toLowerCase().includes(q)));
+}
+
+// ── Modals ─────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el =>
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); })
+);
+
+// ── Location ───────────────────────────────────
+function openLocationModal() {
+  openModal('locationModal');
+  setTimeout(() => {
+    if (!locationMap) {
+      locationMap = L.map('locationPickerMap').setView([pickedLat, pickedLng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(locationMap);
+      const pinIcon = L.divIcon({ className:'', html:'<div style="font-size:30px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">📍</div>', iconAnchor:[15,30], iconSize:[30,30] });
+      locationMarker = L.marker([pickedLat,pickedLng],{icon:pinIcon,draggable:true}).addTo(locationMap);
+      locationMap.on('click', e => { locationMarker.setLatLng(e.latlng); pickedLat=e.latlng.lat; pickedLng=e.latlng.lng; reverseGeocode(pickedLat,pickedLng); });
+      locationMarker.on('dragend', e => { const ll=e.target.getLatLng(); pickedLat=ll.lat; pickedLng=ll.lng; reverseGeocode(pickedLat,pickedLng); });
+    } else { locationMap.invalidateSize(); }
+  }, 200);
+}
+
+async function reverseGeocode(lat,lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    const d = await r.json();
+    pickedAddress = d.display_name || `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  } catch(e) { pickedAddress = `${lat.toFixed(4)},${lng.toFixed(4)}`; }
+  document.getElementById('locationSearchInput').value = pickedAddress;
+}
+
+async function searchAddress() {
+  const q = document.getElementById('locationSearchInput').value.trim(); if(!q) return;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+    const d = await r.json();
+    if (!d.length) { showToast('Address not found','warn'); return; }
+    pickedLat=parseFloat(d[0].lat); pickedLng=parseFloat(d[0].lon); pickedAddress=d[0].display_name;
+    locationMap.setView([pickedLat,pickedLng],15); locationMarker.setLatLng([pickedLat,pickedLng]);
+    document.getElementById('locationSearchInput').value = pickedAddress;
+  } catch(e) { showToast('Search failed','warn'); }
+}
+
+function useCurrentLocation() {
+  if (!navigator.geolocation) { showToast('Geolocation not supported','warn'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    pickedLat=pos.coords.latitude; pickedLng=pos.coords.longitude;
+    locationMap.setView([pickedLat,pickedLng],16); locationMarker.setLatLng([pickedLat,pickedLng]);
+    reverseGeocode(pickedLat,pickedLng);
+  }, () => showToast('Could not get location','warn'));
+}
+
+function confirmLocation() {
+  const label = pickedAddress.length > 36 ? pickedAddress.slice(0,36)+'…' : pickedAddress;
+  document.getElementById('locationLabel').textContent     = label;
+  document.getElementById('deliveryAddressBar').textContent = pickedAddress;
+  localStorage.setItem('mm_delivery_lat',     pickedLat);
+  localStorage.setItem('mm_delivery_lng',     pickedLng);
+  localStorage.setItem('mm_delivery_address', pickedAddress);
+  closeModal('locationModal');
+  showToast('Location saved','green');
+}
+
+function restoreLocation() {
+  const saved = localStorage.getItem('mm_delivery_address');
+  if (!saved) return;
+  const label = saved.length>30 ? saved.slice(0,30)+'…' : saved;
+  document.getElementById('locationLabel').textContent     = label;
+  document.getElementById('deliveryAddressBar').textContent = saved;
+  pickedLat     = parseFloat(localStorage.getItem('mm_delivery_lat') || 10.3157);
+  pickedLng     = parseFloat(localStorage.getItem('mm_delivery_lng') || 123.8854);
+  pickedAddress = saved;
+}
+
+// ── Toast ────────────────────────────────7──────
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.className=`show ${type}`;
+  setTimeout(() => t.className='', 2800);
+}
+
+// ── Helpers ────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rider Dashboard — MetroMart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../vendor/leaflet/leaflet.min.css">
+<script src="../vendor/leaflet/leaflet.min.js"></script>
+<style>
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;}
+.status-active{background:#dcfce7;color:#15803d;}
+.status-offline{background:#fee2e2;color:#991b1b;}
+.status-busy{background:#fef9c3;color:#92400e;}
+
+.delivery-card{background:var(--white);border:1.5px solid var(--stone-dark);border-radius:var(--radius-md);padding:20px;margin-bottom:12px;transition:border-color .18s,box-shadow .18s;}
+.delivery-card:hover{border-color:var(--green-mid);box-shadow:0 4px 16px rgba(26,122,58,.08);}
+.delivery-card .d-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.delivery-card .d-id{font-weight:700;font-size:15px;}
+.delivery-card .d-addr{font-size:13px;color:var(--ink-soft);margin-bottom:6px;}
+.delivery-card .d-total{font-weight:700;color:var(--green);font-size:15px;}
+.delivery-card .d-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+
+/* COD vs Cashless delivery panel */
+.delivery-action-panel{border-radius:var(--radius-md);padding:18px 20px;margin-top:14px;}
+.delivery-action-panel.cod{background:linear-gradient(135deg,#1a7a3a,#0d5526);color:#fff;}
+.delivery-action-panel.cashless{background:linear-gradient(135deg,#1d68d9,#1e3a8a);color:#fff;}
+.delivery-action-panel .pay-label{font-size:12px;opacity:.8;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+.delivery-action-panel .pay-total{font-family:'Fraunces',serif;font-size:28px;font-weight:300;margin-bottom:4px;}
+.delivery-action-panel .pay-breakdown{font-size:12px;opacity:.75;margin-bottom:14px;}
+.delivery-action-panel .pay-method-badge{display:inline-block;background:rgba(255,255,255,.2);border-radius:30px;padding:4px 14px;font-size:12px;font-weight:700;letter-spacing:.4px;margin-bottom:14px;}
+.btn-dropoff{width:100%;padding:12px;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.5);border-radius:var(--radius-sm);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:background .18s;}
+.btn-dropoff:hover{background:rgba(255,255,255,.3);}
+.btn-mark-delivered{width:100%;padding:13px;background:#fff;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .18s;}
+.btn-mark-delivered.cod-btn{color:#1a7a3a;}
+.btn-mark-delivered.cashless-btn{color:#1d68d9;}
+.btn-mark-delivered:hover{opacity:.88;}
+
+.earnings-card{background:linear-gradient(135deg,#1a7a3a,#0d5526);color:#fff;border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;}
+.earnings-card .big-num{font-family:'Fraunces',serif;font-size:36px;font-weight:300;margin-bottom:4px;}
+.earnings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+.earnings-mini{background:rgba(255,255,255,.12);border-radius:10px;padding:12px 16px;text-align:center;}
+.earnings-mini .num{font-family:'Fraunces',serif;font-size:22px;font-weight:300;}
+.earnings-mini .lbl{font-size:10px;opacity:.7;margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+
+.active-banner{background:linear-gradient(135deg,#1a7a3a,#0d5526);color:#fff;border-radius:var(--radius-md);padding:18px 22px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.filter-btn{padding:7px 14px;border:1.5px solid var(--stone-dark);background:var(--white);border-radius:40px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;}
+.filter-btn.active,.filter-btn:hover{background:var(--green);color:#fff;border-color:var(--green);}
+
+.profile-img-wrap{width:100px;height:100px;border-radius:50%;background:var(--green);color:#fff;font-size:36px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;overflow:hidden;cursor:pointer;border:3px solid var(--stone-mid);}
+.profile-img-wrap img{width:100%;height:100%;object-fit:cover;}
+
+.profile-grid{display:grid;gap:20px;}
+@media (min-width:900px){.profile-grid{grid-template-columns:320px 1fr;}}
+.profile-preview-card{padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;}
+.profile-preview-card h3{margin-bottom:0;font-size:18px;}
+.profile-summary-list{display:grid;gap:12px;width:100%;margin-top:12px;}
+.profile-summary-item{display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+.profile-summary-label{font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.5px;}
+.profile-edit-card .card-body{padding:24px;}
+.profile-note{font-size:13px;color:var(--ink-soft);margin-top:12px;line-height:1.5;}
+
+/* Navigation map */
+#deliveryMap{width:100%;height:400px;border-radius:var(--radius-md);z-index:1;}
+.map-legend{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);}
+.map-legend-item{display:flex;align-items:center;gap:6px;}
+
+.tip-badge{display:inline-block;background:#fef3c7;color:#d97706;border-radius:30px;padding:2px 10px;font-size:11px;font-weight:700;margin-left:6px;}
+.history-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--stone-mid);font-size:14px;}
+.history-row:last-child{border-bottom:none;}
+
+.pw-strength{margin-top:8px;display:none;}
+.pw-strength.show{display:block;}
+.pw-bar-track{height:3px;border-radius:2px;background:var(--stone-mid);overflow:hidden;margin-bottom:5px;}
+.pw-bar-fill{height:100%;border-radius:2px;transition:width .3s,background .3s;}
+.pw-label{font-size:11px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="app-layout">
+
+  <div class="sidebar">
+    <div class="sidebar-logo">Metro<span class="logo-dark">Mart</span></div>
+    <div class="sidebar-nav">
+      <div class="nav-item active" onclick="showTab('overview')"   id="nav-overview">   <span class="nav-icon">📊</span> Overview</div>
+      <div class="nav-item"        onclick="showTab('deliveries')" id="nav-deliveries"> <span class="nav-icon">📦</span> Deliveries</div>
+      <div class="nav-item"        onclick="showTab('history')"    id="nav-history">    <span class="nav-icon">📋</span> History</div>
+      <div class="nav-item"        onclick="showTab('earnings')"   id="nav-earnings">   <span class="nav-icon">💰</span> Earnings</div>
+      <div class="nav-item"        onclick="showTab('ewallet')"   id="nav-ewallet">   <span class="nav-icon">💳</span> E-Wallet</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="doLogout()"><span class="nav-icon">🚪</span> Log out</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="topbar">
+      <div class="topbar-title" style="font-family:'Fraunces',serif;font-weight:400;font-size:18px;">Rider Dashboard</div>
+      <div class="topbar-actions">
+        <span id="statusPill" class="status-pill status-offline">⚫ Offline</span>
+        <div class="profile-wrap">
+          <div class="avatar" id="avatarEl" style="background:#1d68d9;" onclick="toggleProfileMenu()">R</div>
+          <div class="profile-menu" id="profileMenu">
+            <div class="profile-menu-item" onclick="showTab('profile'); closeProfileMenu();"><span>👤</span> View Profile</div>
+            <div class="profile-menu-item" onclick="doLogout(); closeProfileMenu();"><span>🚪</span> Log out</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- OVERVIEW -->
+      <div id="tab-overview">
+        <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:300;margin-bottom:20px;">
+          Hello, <em style="color:var(--green);font-style:italic;" id="greetName">Rider</em>! 🚴
+        </div>
+
+        <div id="activeBanner" style="display:none;" class="active-banner">
+          <div>
+            <h4 style="font-size:15px;font-weight:700;margin-bottom:4px;">🚴 Active delivery in progress!</h4>
+            <p style="font-size:13px;opacity:.8;" id="activeBannerAddr">—</p>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="margin-bottom:24px;">
+          <div class="stat-card"><div class="stat-icon">📦</div><div class="stat-val" id="cntTotal">0</div><div class="stat-label">My deliveries</div></div>
+          <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-val" id="cntDone">0</div><div class="stat-label">Completed</div></div>
+          <div class="stat-card"><div class="stat-icon">🚴</div><div class="stat-val" id="cntActive">0</div><div class="stat-label">Active now</div></div>
+          <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-val" id="cntTodayEarnings">₱0</div><div class="stat-label">Today's earnings</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Available deliveries</h3>
+            <button class="btn btn-sm btn-secondary" onclick="loadDeliveries()">🔄 Refresh</button>
+          </div>
+          <div class="card-body" id="homeDeliveries"><p class="text-muted">Loading…</p></div>
+        </div>
+      </div>
+
+      <!-- DELIVERIES -->
+      <div id="tab-deliveries" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="sec-title">Deliveries</div>
+          <button class="btn btn-sm btn-secondary" onclick="loadDeliveries()">🔄 Refresh</button>
+        </div>
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setFilter(this,'all')">All</button>
+          <button class="filter-btn"        onclick="setFilter(this,'Ready for Delivery')">Available</button>
+          <button class="filter-btn"        onclick="setFilter(this,'Delivering')">My Active</button>
+        </div>
+        <div id="deliveriesContainer"></div>
+      </div>
+
+      <!-- HISTORY -->
+      <div id="tab-history" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="sec-title">Delivery History</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;">
+              <label class="form-label" style="font-size:12px;opacity:.75;">Select date</label>
+              <input type="date" id="historyDate" class="form-control" onchange="renderHistory()">
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="clearHistoryDate()">Clear</button>
+            <select class="filter-select" id="historyStatusFilter" onchange="renderHistory()">
+              <option value="">All Statuses</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div id="historySummary" style="font-size:13px;opacity:.75;margin-bottom:12px;">Showing history for all dates.</div>
+        <div class="card">
+          <div class="card-body" id="historyContainer"><p class="text-muted">Loading…</p></div>
+        </div>
+      </div>
+
+      <!-- EARNINGS -->
+      <div id="tab-earnings" style="display:none;">
+        <div class="earnings-card">
+          <div style="font-size:13px;opacity:.7;margin-bottom:8px;">Total Earnings</div>
+          <div class="big-num" id="totalEarnings">₱0.00</div>
+          <div style="font-size:13px;opacity:.6;">Based on delivered orders</div>
+          <div class="earnings-grid">
+            <div class="earnings-mini"><div class="num" id="totalBase">₱0</div><div class="lbl">Base fees</div></div>
+            <div class="earnings-mini"><div class="num" id="totalTips">₱0</div><div class="lbl">Tips</div></div>
+            <div class="earnings-mini"><div class="num" id="totalDeliveries">0</div><div class="lbl">Deliveries</div></div>
+            <div class="earnings-mini"><div class="num" id="avgEarnings">₱0</div><div class="lbl">Avg/delivery</div></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="filter-btn active" id="earningsTodayBtn" onclick="setEarningsView('today')">Today</button>
+            <button class="filter-btn" id="earningsMonthBtn" onclick="setEarningsView('month')">Month</button>
+          </div>
+          <div id="earningsSubtitle" style="font-size:13px;opacity:.75;">Showing today earnings</div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>Earnings Breakdown</h3></div>
+          <div class="card-body" id="earningsTable"><p class="text-muted">Loading…</p></div>
+        </div>
+      </div>
+
+      <!-- E-WALLET -->
+      <div id="tab-ewallet" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="sec-title">E-Wallet</div>
+          <button class="btn btn-sm btn-secondary" onclick="loadRiderProfile()">Refresh Balance</button>
+        </div>
+        <div class="card">
+          <div class="card-body" style="max-width:560px;">
+            <div style="font-size:14px;color:var(--ink-soft);margin-bottom:10px;">Available wallet balance</div>
+            <div style="font-size:42px;font-weight:700;color:var(--green);" id="walletBalance">₱0.00</div>
+            <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
+              <button class="btn btn-primary" onclick="openCashoutModal()">Cash Out</button>
+            </div>
+            <div style="font-size:13px;color:var(--ink-soft);margin-top:18px;">Cashout processed immediately and the balance updates right away.</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px;">
+          <div class="card-header"><h3>Transaction History</h3></div>
+          <div class="card-body" id="walletHistoryContainer"><p class="text-muted">Loading…</p></div>
+        </div>
+      </div>
+
+      <!-- NAVIGATE -->
+      <div id="tab-navigate" style="display:none;">
+        <div class="sec-title mb-4">Navigate to Customer</div>
+
+        <div class="card mb-6" id="activeDeliveryInfo">
+          <div class="card-body empty-state" style="padding:32px;">
+            <div class="empty-state-icon">🚴</div>
+            <h4>No active delivery</h4>
+            <p>Accept an order first, then navigate here.</p>
+          </div>
+        </div>
+
+        <div style="font-weight:600;font-size:15px;margin-bottom:12px;">📍 Live Map</div>
+        <div id="deliveryMap"></div>
+        <div class="map-legend">
+          <div class="map-legend-item">🛵 Your location</div>
+          <div class="map-legend-item">📍 Customer location</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;" id="mapActions"></div>
+      </div>
+
+      <!-- PROFILE -->
+      <div id="tab-profile" style="display:none;">
+        <div style="margin-bottom:20px;">
+          <div class="sec-title mb-2">My Profile</div>
+          <p class="text-muted" style="max-width:720px;">Manage your rider account, update contact details, and keep your delivery status current.</p>
+        </div>
+
+        <div class="profile-grid">
+          <div class="card profile-preview-card">
+            <h3>Profile preview</h3>
+            <div class="profile-img-wrap" id="profileImgWrap" onclick="document.getElementById('profileImgInput').click()">
+              <span id="profileInitial">R</span>
+            </div>
+            <input type="file" id="profileImgInput" accept="image/*" style="display:none;" onchange="previewProfileImg(this)">
+
+            <div class="profile-summary-list">
+              <div class="profile-summary-item"><div class="profile-summary-label">Name</div><div id="profilePreviewName">Rider</div></div>
+              <div class="profile-summary-item"><div class="profile-summary-label">Email</div><div id="profilePreviewEmail">—</div></div>
+              <div class="profile-summary-item"><div class="profile-summary-label">Phone</div><div id="profilePreviewPhone">—</div></div>
+              <div class="profile-summary-item"><div class="profile-summary-label">Vehicle</div><div id="profilePreviewVehicle">—</div></div>
+            </div>
+
+            <div style="margin-top:12px;"><span id="profileStatusPill" class="status-pill status-offline">⚫ Offline</span></div>
+            <div class="profile-note">Your profile is used across deliveries and account settings. Keep it current so customers can trust your account.</div>
+          </div>
+
+          <div class="card profile-edit-card">
+            <div class="card-body">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
+                <div>
+                  <h3 style="margin:0;font-size:18px;">Edit profile</h3>
+                  <div style="font-size:13px;color:var(--ink-soft);">Update your details and delivery status from one place.</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                  <button class="btn btn-sm" style="background:#dcfce7;color:#15803d;" onclick="setStatus('active')">🟢 Go Online</button>
+                  <button class="btn btn-sm" style="background:#fef9c3;color:#92400e;" onclick="setStatus('busy')">🟡 Busy</button>
+                  <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;" onclick="setStatus('offline')">🔴 Go Offline</button>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group"><label class="form-label">First Name</label><input class="form-control" id="rFName"></div>
+                <div class="form-group"><label class="form-label">Last Name</label><input class="form-control" id="rLName"></div>
+              </div>
+              <div class="form-group"><label class="form-label">Email</label><input class="form-control" id="rEmail" disabled></div>
+              <div class="form-group"><label class="form-label">Phone</label><input class="form-control" id="rPhone" placeholder="9171234567" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" oninput="handlePhoneInput(this)"><div class="form-hint" id="rPhoneHint">Philippine number — 10 digits starting with 9 (e.g. 9171234567)</div><div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">This phone number must be unique for each rider.</div></div>
+              <div class="form-group"><label class="form-label">Vehicle</label>
+                <select class="form-control" id="rVehicle">
+                  <option value="motorcycle">Motorcycle 🏍️</option>
+                  <option value="bicycle">Bicycle 🚲</option>
+                  <option value="car">Car 🚗</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="saveProfile()">💾 Save Profile</button>
+
+              <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--stone-mid);">
+                <div style="font-weight:600;font-size:15px;margin-bottom:16px;">🔑 Change Password</div>
+                <div class="form-group"><label class="form-label">Current Password</label><input class="form-control" id="oldPw" type="password"></div>
+                <div class="form-group"><label class="form-label">New Password <span style="font-size:11px;color:var(--ink-soft);font-weight:400;text-transform:none;">(min 8 characters)</span></label>
+                  <input class="form-control" id="newPw" type="password" oninput="checkPwStrength(this.value)">
+                  <div class="pw-strength" id="pwStrengthWrap">
+                    <div class="pw-bar-track"><div class="pw-bar-fill" id="pwBar"></div></div>
+                    <span class="pw-label" id="pwLabel"></span>
+                  </div>
+                </div>
+                <div class="form-group"><label class="form-label">Confirm New Password</label><input class="form-control" id="confirmPw" type="password"></div>
+                <button class="btn btn-secondary" onclick="changePassword()">Update Password</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div class="modal-overlay" id="orderModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header"><h3>Delivery Details</h3><button class="modal-close" onclick="closeModal('orderModal')">✕</button></div>
+    <div class="modal-body" id="orderModalBody"></div>
+    <div class="modal-footer" id="orderModalFooter"></div>
+  </div>
+</div>
+
+<!-- Report Customer Modal -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header"><h3>🚩 Report Customer</h3><button class="modal-close" onclick="closeModal('reportModal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="reportOrderId">
+      <input type="hidden" id="reportCustomerId">
+      <div style="background:var(--stone);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:14px;">
+        Reporting issue for order: <strong id="reportOrderLabel">—</strong>
+      </div>
+      <div class="form-group"><label class="form-label">Reason <span class="required">*</span></label>
+        <select class="form-control" id="reportReason">
+          <option value="">Select reason…</option>
+          <option value="fake_address">Fake delivery address</option>
+          <option value="no_answer">Customer not answering</option>
+          <option value="refused_delivery">Refused delivery</option>
+          <option value="fraud">Suspected fraud</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Details</label>
+        <textarea class="form-control" id="reportDetails" rows="3" placeholder="Describe the issue…"></textarea>
+      </div>
+      <div style="font-size:12px;color:var(--ink-soft);">Admin will review this report. False reports may lead to account suspension.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('reportModal')">Cancel</button>
+      <button class="btn btn-danger" onclick="submitReport()">Submit Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cashout Modal -->
+<div class="modal-overlay" id="cashoutModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><h3>Request Cashout</h3><button class="modal-close" onclick="closeModal('cashoutModal')">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Enter how much you want to cash out from your wallet balance.</div>
+      <div class="form-group"><label class="form-label">Available balance</label><input class="form-control" id="cashoutBalance" disabled></div>
+      <div class="form-group"><label class="form-label">GCash number</label><input class="form-control" id="gcashNumber" type="tel" placeholder="9171234567" maxlength="10"></div>
+      <div class="form-group"><label class="form-label">GCash PIN (for verification)</label><input class="form-control" id="gcashPin" type="password" maxlength="6" placeholder="PIN (play verification)" inputmode="numeric"></div>
+      <div class="form-group"><label class="form-label">Amount to cash out</label><input class="form-control" id="cashoutAmount" type="number" min="1" step="0.01" placeholder="₱0.00"></div>
+      <div style="font-size:12px;color:var(--ink-soft);">This is a simulated cashout flow for demonstration; no real transfer will occur. Your PIN is not stored.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('cashoutModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCashout()">Send Request</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '../api/';
+let currentUser = null;
+let riderProfile = null;
+let allOrders = [], allEarnings = [];
+let currentFilter = 'all', activeOrder = null, earningsView = 'today';
+let leafletMap = null, riderMarker = null, custMarker = null, routeLine = null;
+let riderLat = null, riderLng = null;
+// profile image uploads disabled
+let profileImgFile = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('profileImgInput'); if (inp) inp.remove();
+  const wrap = document.getElementById('profileImgWrap'); if (wrap) wrap.removeAttribute('onclick');
+});
+
+async function markArrived(orderId) {
+  const d = await api('orders/?id=' + orderId, { method: 'PATCH', body: JSON.stringify({ arrived: true }) });
+  if (!d.ok) return showToast(d.error || 'Failed to notify arrival', 'error');
+  showToast('Customer notified: Rider has arrived', 'success');
+  await loadDeliveries();
+}
+let profileMenuOpen = false;
+
+async function api(path, opts = {}) {
+  try {
+    const isForm = opts.body instanceof FormData;
+    const r = await fetch(API + path, { headers: isForm ? {} : { 'Content-Type': 'application/json' }, ...opts });
+    const text = await r.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      return { ok: false, error: 'Invalid API response: ' + text };
+    }
+  } catch(e) { return { ok: false, error: e.message }; }
+}
+
+// ── Init ───────────────────────────────────────
+(async () => {
+  const me = await api('auth/?action=me');
+  if (!me.ok || me.data.role !== 'rider') { window.location.href = '../login.html'; return; }
+  currentUser = me.data;
+
+  // Force password change check
+  if (me.data.force_password_change) { window.location.href = '../change-password.html'; return; }
+
+  const name = currentUser.name || 'Rider';
+  document.getElementById('greetName').textContent = name.split(' ')[0];
+  document.getElementById('avatarEl').textContent = name[0].toUpperCase();
+  document.getElementById('profileInitial').textContent = name[0].toUpperCase();
+  document.getElementById('rFName').value = name.split(' ')[0] || '';
+  document.getElementById('rLName').value = name.split(' ').slice(1).join(' ') || '';
+  document.getElementById('rEmail').value = currentUser.email || '';
+
+  await loadRiderProfile();
+  await loadDeliveries();
+  await loadEarnings();
+  initMap();
+  getRiderLocation();
+  setInterval(loadDeliveries, 30000);
+})();
+
+// ── Deliveries ─────────────────────────────────
+async function loadDeliveries() {
+  const d = await api('orders/');
+  allOrders = d.data || [];
+
+  const myOrders  = allOrders.filter(o => o.rider_id == currentUser?.id);
+  const canReceive = riderProfile?.rider_status === 'active';
+  const available = allOrders.filter(o => o.status === 'Ready for Delivery' && !o.rider_id && canReceive);
+  const myActive  = myOrders.filter(o => o.status === 'Delivering');
+  const done      = myOrders.filter(o => o.status === 'Delivered');
+  const today     = myOrders.filter(o => o.status === 'Delivered' && isToday(o.delivered_at || o.ordered_at));
+  const todayEarn = today.reduce((s, o) => s + 50 + parseFloat(o.tip_amount || 0), 0);
+
+  document.getElementById('cntTotal').textContent = myOrders.length;
+  document.getElementById('cntActive').textContent = myActive.length;
+  document.getElementById('cntDone').textContent = done.length;
+  document.getElementById('cntTodayEarnings').textContent = '₱' + todayEarn.toFixed(2);
+
+  activeOrder = myActive[0] || null;
+  if (!activeOrder && riderProfile?.rider_status === 'busy') {
+    await setStatus('active', { silent: true });
+  }
+  updateActiveBanner();
+  renderHomeDeliveries(available);
+  renderDeliveriesList();
+  renderHistory();
+}
+
+function isToday(ds) {
+  if (!ds) return false;
+  const d = new Date(ds), n = new Date();
+  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+}
+
+function inPeriod(ds, period) {
+  if (!ds || period === 'all') return true;
+  const d = new Date(ds), n = new Date();
+  if (period === 'today') return isToday(ds);
+  if (period === 'week') { const w = new Date(n); w.setDate(n.getDate() - 7); return d >= w; }
+  if (period === 'month') { return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear(); }
+  return true;
+}
+
+function updateActiveBanner() {
+  const banner = document.getElementById('activeBanner');
+  if (!activeOrder || activeOrder.status !== 'Delivering') { banner.style.display = 'none'; return; }
+  banner.style.display = 'flex';
+  document.getElementById('activeBannerAddr').textContent = activeOrder.delivery_address || activeOrder.customer_address || '—';
+}
+
+function renderHomeDeliveries(list) {
+  const el = document.getElementById('homeDeliveries');
+  if (!list.length) { el.innerHTML = '<p class="text-muted" style="padding:16px 0;">No available deliveries right now. Make sure you are Online.</p>'; return; }
+  el.innerHTML = list.slice(0, 5).map(o => deliveryCardHTML(o)).join('');
+  attachDeliveryActionListeners();
+}
+
+function renderDeliveriesList() {
+  let list;
+  if (currentFilter === 'all') {
+    const canReceive = riderProfile?.rider_status === 'active';
+    list = [
+      ...allOrders.filter(o => o.rider_id == currentUser?.id && o.status === 'Delivering'),
+      ...allOrders.filter(o => o.status === 'Ready for Delivery' && !o.rider_id && canReceive)
+    ];
+  } else if (currentFilter === 'Ready for Delivery') {
+    const canReceive = riderProfile?.rider_status === 'active';
+    list = canReceive ? allOrders.filter(o => o.status === 'Ready for Delivery' && !o.rider_id) : [];
+  } else if (currentFilter === 'Delivering') {
+    list = allOrders.filter(o => o.rider_id == currentUser?.id && o.status === 'Delivering');
+  } else {
+    list = allOrders.filter(o => o.status === currentFilter);
+  }
+  const container = document.getElementById('deliveriesContainer');
+  container.innerHTML = list.length
+    ? list.map(o => deliveryCardHTML(o)).join('')
+    : '<div class="empty-state"><div class="empty-state-icon">📭</div><h4>No deliveries found</h4></div>';
+  attachDeliveryActionListeners();
+}
+
+function deliveryCardHTML(o) {
+  const sc = { 'Pending': 'badge-yellow', 'Ready for Delivery': 'badge-blue', 'Delivering': 'badge-yellow', 'Delivered': 'badge-green', 'Cancelled': 'badge-red' };
+  const isMyActive = o.rider_id == currentUser?.id && o.status === 'Delivering';
+  const canReceive = riderProfile?.rider_status === 'active';
+  const canAccept  = o.status === 'Ready for Delivery' && !o.rider_id && canReceive;
+  const date = o.ordered_at ? new Date(o.ordered_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+  const tip  = parseFloat(o.tip_amount || 0);
+  const isCOD = (o.pay_method || 'cod') === 'cod';
+  const productTotal = parseFloat(o.total || 0);
+  const deliveryFee  = parseFloat(o.delivery_fee || 50);
+  const arrived = !!o.arrived_at;
+  const safeCustomerName = jsEscape(o.customer_name || 'Customer');
+
+  let actionPanel = '';
+  if (isMyActive) {
+    let arrivalDetails = '';
+    
+    if (arrived) {
+      const allItems = o.items || [];
+      const activeItems = allItems.filter(i => !i.status || i.status !== 'Cancelled');
+      const cancelledItems = allItems.filter(i => i.status === 'Cancelled');
+      
+      let itemsHTML = '';
+      
+      // Active items
+      if (activeItems.length > 0) {
+        itemsHTML += '<div style="margin-bottom:12px;">' +
+          '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">✓ Active Items</div>' +
+          activeItems.map(i =>
+            '<div style="font-size:13px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;">' +
+            '<span>' + esc(i.product_name || 'Item') + ' × ' + i.qty + '</span>' +
+            '<span style="font-weight:600;">₱' + parseFloat(i.subtotal || 0).toFixed(2) + '</span>' +
+            '</div>'
+          ).join('') +
+        '</div>';
+      }
+      
+      arrivalDetails = '<div style="background:rgba(255,255,255,.12);border-radius:12px;padding:14px;margin-bottom:12px;line-height:1.6;">' +
+        '<div style="font-weight:700;margin-bottom:10px;">Delivery details</div>' +
+        '<div style="font-size:13px;margin-bottom:8px;">📍 ' + esc(o.delivery_address || o.customer_address || '—') + '</div>' +
+        (o.customer_name ? '<div style="font-size:13px;margin-bottom:4px;">👤 ' + esc(o.customer_name) + '</div>' : '') +
+        (o.customer_phone ? '<div style="font-size:13px;margin-bottom:8px;">📞 ' + esc(o.customer_phone) + '</div>' : '') +
+        '<div style="font-size:13px;margin-bottom:10px;">💳 ' + (isCOD ? 'COD' : 'Cashless') + ' · Total ₱' + (productTotal + deliveryFee).toFixed(2) + '</div>' +
+        (tip > 0 ? '<div style="color:rgba(255,255,255,.9);font-weight:600;margin-bottom:10px;">Tip ₱' + tip.toFixed(2) + '</div>' : '') +
+        '<div style="font-weight:700;font-size:13px;margin-bottom:8px;">🛍️ Order Items</div>' +
+        itemsHTML +
+      '</div>';
+    }
+
+    const deliveryAction = arrived ? 'delivered' : 'arrived';
+    const deliveryLabel = arrived ? '🏁 Mark as Delivered' : '🟢 Arrived';
+    actionPanel = '<div class="delivery-action-panel ' + (isCOD ? 'cod' : 'cashless') + '">' +
+      '<div class="pay-label">' + (isCOD ? 'Cash on Delivery' : 'Cashless Payment') + '</div>' +
+      '<div class="pay-method-badge">' + (isCOD ? '💵 COD' : '📱 ' + (o.pay_method || 'cashless').toUpperCase()) + '</div>' +
+      '<div class="pay-total">₱' + (productTotal + deliveryFee).toFixed(2) + '</div>' +
+      '<div class="pay-breakdown">Products ₱' + productTotal.toFixed(2) + ' + Delivery ₱' + deliveryFee.toFixed(2) + (tip > 0 ? ' + Tip ₱' + tip.toFixed(2) : '') + '</div>' +
+      arrivalDetails +
+      '<button type="button" class="btn-mark-delivered ' + (isCOD ? 'cod-btn' : 'cashless-btn') + '" data-action="' + deliveryAction + '" data-order="' + o.id + '">' +
+      deliveryLabel +
+      '</button>' +
+      '</div>';
+  }
+
+  return '<div class="delivery-card">' +
+    '<div class="d-header">' +
+      '<span class="d-id">📦 #' + String(o.id) + '</span>' +
+      '<span class="badge ' + (sc[o.status] || 'badge-gray') + '">' + o.status + '</span>' +
+    '</div>' +
+    '<div class="d-addr">📍 ' + esc(o.delivery_address || o.customer_address || '—') + '</div>' +
+    '<div class="d-total">₱' + productTotal.toFixed(2) + ' · ' + esc(o.pay_method || 'cod') + (tip > 0 ? '<span class="tip-badge">Tip ₱' + tip.toFixed(2) + '</span>' : '') + '</div>' +
+    '<div style="font-size:12px;color:var(--ink-soft);">' + date + ' · Base fee: ₱50.00</div>' +
+    actionPanel +
+    '<div class="d-actions">' +
+      (!arrived ? '<button class="btn btn-sm btn-secondary" onclick="viewOrder(' + o.id + ')">👁 Details</button>' : '') +
+      (canAccept ? '<button class="btn btn-sm btn-primary" onclick="acceptDelivery(' + o.id + ')">✅ Accept</button>' : '') +
+      (isMyActive ? '<button class="btn btn-sm btn-outline" onclick="showTab(\'navigate\')">🗺️ Navigate</button>' : '') +
+      (isMyActive ? '<button class="btn btn-sm btn-danger" onclick="openReport(' + o.id + ',' + (o.customer_id || 0) + ',\'' + safeCustomerName + '\')">🚩 Report</button>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+// ── Actions ────────────────────────────────────
+async function acceptDelivery(orderId) {
+  if (riderProfile?.rider_status !== 'active') {
+    return showToast('You must be online and not busy to accept deliveries', 'error');
+  }
+  const d = await api('orders/?id=' + orderId, { method: 'PATCH', body: JSON.stringify({ status: 'Delivering' }) });
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  await setStatus('busy');
+  showToast('Delivery accepted! 📦 Status set to Busy.', 'success');
+  await loadDeliveries();
+}
+
+function showDropOffConfirm(orderId) {
+  const o = allOrders.find(x => x.id == orderId); if (!o) return;
+  const total = parseFloat(o.total || 0) + parseFloat(o.delivery_fee || 50);
+  if (confirm('Confirm package drop-off to customer?\n\nCollect ₱' + total.toFixed(2) + ' cash from customer.')) {
+    showToast('Package dropped off — collecting ₱' + total.toFixed(2), 'success');
+  }
+}
+
+function attachDeliveryActionListeners() {
+  document.querySelectorAll('.btn-mark-delivered[data-action][data-order]').forEach(btn => {
+    btn.removeEventListener('click', handleDeliveryAction);
+    btn.addEventListener('click', handleDeliveryAction);
+  });
+}
+
+function handleDeliveryAction(evt) {
+  const btn = evt.currentTarget || evt.target;
+  const orderId = btn.dataset.order;
+  const action = btn.dataset.action;
+  if (!orderId || !action) return;
+  if (action === 'arrived') {
+    markArrived(orderId);
+  } else if (action === 'delivered') {
+    markDelivered(orderId);
+  }
+}
+
+async function markDelivered(orderId) {
+  if (!confirm('Mark this order as delivered?')) return;
+  const d = await api('orders/?id=' + orderId, { method: 'PATCH', body: JSON.stringify({ status: 'Delivered' }) });
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  // Determine payment method from response (fallback to cached order)
+  const updatedOrder = d.data || allOrders.find(o => o.id == orderId) || {};
+  const isCOD = (updatedOrder.pay_method || 'cod') === 'cod';
+  if (isCOD) {
+    showToast('Order delivered! ✅ Tip recorded; base fee pending (COD).', 'success');
+  } else {
+    showToast('Order delivered! ✅ Earnings recorded.', 'success');
+  }
+  activeOrder = null;
+  // return rider to online status
+  await setStatus('active');
+  await loadDeliveries();
+  await loadEarnings();
+  updateNavigateTab();
+}
+
+// ── History ────────────────────────────────────
+function renderHistory() {
+  const selectedDate = document.getElementById('historyDate')?.value || '';
+  const statusF = document.getElementById('historyStatusFilter')?.value || '';
+  const myOrders = allOrders.filter(o => o.rider_id == currentUser?.id);
+  let list = myOrders.filter(o => ['Delivered', 'Cancelled'].includes(o.status));
+  if (selectedDate) {
+    const selected = new Date(selectedDate);
+    list = list.filter(o => isSameDate(o.delivered_at || o.ordered_at, selected));
+  }
+  if (statusF) list = list.filter(o => o.status === statusF);
+  list.sort((a, b) => new Date(b.ordered_at) - new Date(a.ordered_at));
+
+  const totalEarnings = list.filter(o => o.status === 'Delivered')
+    .reduce((sum, o) => sum + 50 + parseFloat(o.tip_amount || 0), 0);
+  const summaryLabel = selectedDate
+    ? 'Date: ' + new Date(selectedDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · Total earnings: ₱' + totalEarnings.toFixed(2)
+    : 'Showing history for all dates · Total earnings: ₱' + totalEarnings.toFixed(2);
+  document.getElementById('historySummary').textContent = summaryLabel;
+
+  if (!list.length) {
+    document.getElementById('historyContainer').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><h4>No history yet</h4></div>';
+    return;
+  }
+  const sc = { Delivered: 'badge-green', Cancelled: 'badge-red' };
+  document.getElementById('historyContainer').innerHTML = list.map(o => {
+    const tip    = parseFloat(o.tip_amount || 0);
+    const earned = o.status === 'Delivered' ? 50 + tip : 0;
+    const date   = o.delivered_at || o.ordered_at ? new Date(o.delivered_at || o.ordered_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const isCOD  = (o.pay_method || 'cod') === 'cod';
+    return '<div class="history-row">' +
+      '<div>' +
+        '<div style="font-weight:600;">#' + String(o.id) + '</div>' +
+        '<div style="font-size:12px;color:var(--ink-soft);">' + date + ' · ' + esc(o.customer_name || '—') + '</div>' +
+        '<div style="font-size:12px;color:var(--ink-soft);">📍 ' + esc((o.delivery_address || o.customer_address || '—').slice(0, 50)) + '</div>' +
+        '<div style="font-size:11px;color:var(--ink-soft);">' + (isCOD ? '💵 COD' : '📱 Cashless') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        '<span class="badge ' + (sc[o.status] || 'badge-gray') + '">' + o.status + '</span>' +
+        (o.status === 'Delivered'
+          ? '<div style="color:var(--green);font-weight:700;font-size:15px;margin-top:4px;">+₱' + earned.toFixed(2) + '</div>' + (tip > 0 ? '<span class="tip-badge">+₱' + tip.toFixed(2) + ' tip</span>' : '')
+          : '<div style="color:var(--ink-soft);font-size:13px;">No earnings</div>') +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function clearHistoryDate() {
+  const input = document.getElementById('historyDate');
+  if (input) input.value = '';
+  renderHistory();
+}
+
+function isSameDate(ds, compareDate) {
+  if (!ds || !compareDate) return false;
+  const d = new Date(ds);
+  return d.getDate() === compareDate.getDate() && d.getMonth() === compareDate.getMonth() && d.getFullYear() === compareDate.getFullYear();
+}
+
+// ── Earnings ───────────────────────────────────
+async function loadEarnings() {
+  allEarnings = allOrders.filter(o => o.rider_id == currentUser?.id && o.status === 'Delivered');
+  renderEarnings();
+}
+
+function setEarningsView(view) {
+  earningsView = view;
+  document.getElementById('earningsTodayBtn')?.classList.toggle('active', view === 'today');
+  document.getElementById('earningsMonthBtn')?.classList.toggle('active', view === 'month');
+  renderEarnings();
+}
+
+function renderEarnings() {
+  const monthList = allEarnings.filter(o => inPeriod(o.delivered_at || o.ordered_at, 'month'));
+  const todayList = monthList.filter(o => isToday(o.delivered_at || o.ordered_at));
+  const displayList = earningsView === 'today' ? todayList : monthList;
+  const totalBase = displayList.length * 50;
+  const totalTips = displayList.reduce((s, o) => s + parseFloat(o.tip_amount || 0), 0);
+  const total = totalBase + totalTips;
+  const avg = displayList.length ? total / displayList.length : 0;
+  const todayTotal = todayList.reduce((s, o) => s + 50 + parseFloat(o.tip_amount || 0), 0);
+  const now = new Date();
+
+  if (earningsView === 'today') {
+    document.getElementById('earningsSubtitle').textContent = 'Today: ' + now.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });
+  } else {
+    document.getElementById('earningsSubtitle').textContent = 'This month: ' + now.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' }) + ' · Today: ₱' + todayTotal.toFixed(2);
+  }
+
+  document.getElementById('totalEarnings').textContent = '₱' + total.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+  document.getElementById('totalBase').textContent = '₱' + totalBase.toFixed(0);
+  document.getElementById('totalTips').textContent = '₱' + totalTips.toFixed(0);
+  document.getElementById('totalDeliveries').textContent = displayList.length;
+  document.getElementById('avgEarnings').textContent = '₱' + avg.toFixed(0);
+
+  if (!displayList.length) {
+    const emptyMessage = earningsView === 'today' ? 'No earnings for today yet.' : 'No earnings for this month yet.';
+    document.getElementById('earningsTable').innerHTML = '<p class="text-muted text-center" style="padding:24px;">' + emptyMessage + '</p>';
+    return;
+  }
+
+  displayList.sort((a, b) => new Date(b.ordered_at) - new Date(a.ordered_at));
+  document.getElementById('earningsTable').innerHTML =
+    '<table><thead><tr><th>Order</th><th>Customer</th><th>Date</th><th>Payment</th><th>Base</th><th>Tip</th><th>Total</th></tr></thead><tbody>' +
+    displayList.map(o => {
+      const tip  = parseFloat(o.tip_amount || 0);
+      const date = new Date(o.ordered_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+      const isCOD = (o.pay_method || 'cod') === 'cod';
+      return '<tr>' +
+        '<td>#' + String(o.id) + '</td>' +
+        '<td>' + esc(o.customer_name || '—') + '</td>' +
+        '<td>' + date + '</td>' +
+        '<td>' + (isCOD ? '💵 COD' : '📱 Cashless') + '</td>' +
+        '<td style="color:var(--green);font-weight:600;">₱50.00</td>' +
+        '<td>' + (tip > 0 ? '<span class="tip-badge">₱' + tip.toFixed(2) + '</span>' : '—') + '</td>' +
+        '<td style="font-weight:700;color:var(--green);">₱' + (50 + tip).toFixed(2) + '</td>' +
+        '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+// ── Report ─────────────────────────────────────
+function openReport(orderId, customerId, customerName) {
+  document.getElementById('reportOrderId').value = orderId;
+  document.getElementById('reportCustomerId').value = customerId;
+  document.getElementById('reportOrderLabel').textContent = '#' + String(orderId) + ' (' + customerName + ')';
+  document.getElementById('reportReason').value = '';
+  document.getElementById('reportDetails').value = '';
+  closeModal('orderModal');
+  document.getElementById('reportModal').classList.add('open');
+}
+
+async function submitReport() {
+  const reason    = document.getElementById('reportReason').value;
+  const details   = document.getElementById('reportDetails').value.trim();
+  const orderId   = document.getElementById('reportOrderId').value;
+  const customerId = document.getElementById('reportCustomerId').value;
+  if (!reason) return showToast('Please select a reason', 'error');
+  
+  // Find the order to check if it's delivered
+  const order = allOrders.find(o => o.id == orderId);
+  if (!order) return showToast('Order not found', 'error');
+  
+  // Mark order as Cancelled due to report with is_report flag
+  // If order was Delivered, this will reverse the delivery fee
+  const cancelRes = await api('orders/?id=' + orderId, { 
+    method: 'PATCH', 
+    body: JSON.stringify({ status: 'Cancelled', is_report: true }) 
+  });
+  if (!cancelRes.ok) return showToast('Failed to process report', 'error');
+  
+  // Submit report details
+  const d = await api('customers/customer.php', { method: 'POST', body: JSON.stringify({ order_id: orderId, customer_id: customerId, reason, details }) });
+  
+  showToast('Report submitted — order marked as cancelled & delivery fee reversed', 'success');
+  closeModal('reportModal');
+  await loadDeliveries();
+  await loadEarnings();
+}
+
+// ── View order ─────────────────────────────────
+function viewOrder(orderId) {
+  const o = allOrders.find(x => x.id == orderId); if (!o) return;
+  const sc = { 'Pending': 'badge-yellow', 'Ready for Delivery': 'badge-blue', 'Delivering': 'badge-yellow', 'Delivered': 'badge-green', 'Cancelled': 'badge-red' };
+  const date = o.ordered_at ? new Date(o.ordered_at).toLocaleString('en-PH') : '—';
+  const allItems = o.items || [];
+  const activeItems = allItems.filter(i => !i.status || i.status !== 'Cancelled');
+  const cancelledItems = allItems.filter(i => i.status === 'Cancelled');
+  const tip   = parseFloat(o.tip_amount || 0);
+  const canAccept  = o.status === 'Ready for Delivery' && !o.rider_id;
+  const isMyActive = o.rider_id == currentUser?.id && o.status === 'Delivering';
+  const isCOD = (o.pay_method || 'cod') === 'cod';
+  const productTotal = parseFloat(o.total || 0);
+  const deliveryFee  = parseFloat(o.delivery_fee || 50);
+
+  let itemsHTML = '';
+  
+  // Active items
+  if (activeItems.length > 0) {
+    itemsHTML += '<div style="margin-bottom:12px;">' +
+      '<div style="font-weight:600;font-size:13px;color:var(--green);margin-bottom:6px;">✓ Active Items</div>' +
+      activeItems.map(i =>
+        '<div style="font-size:14px;padding:8px 0;border-bottom:1px solid var(--stone-mid);display:flex;justify-content:space-between;align-items:center;">' +
+        '<span>' + esc(i.product_name || 'Item') + ' × ' + i.qty + '</span>' +
+        '<span style="color:var(--green);font-weight:600;">₱' + parseFloat(i.subtotal || 0).toFixed(2) + '</span>' +
+        '</div>'
+      ).join('') +
+    '</div>';
+  }
+  
+  // Cancelled items
+  if (cancelledItems.length > 0) {
+    itemsHTML += '<div style="margin-top:14px;padding:12px;background:#fee2e2;border:2px solid #fecaca;border-radius:8px;color:#991b1b;">' +
+      '<div style="font-weight:700;margin-bottom:10px;font-size:14px;display:flex;align-items:center;gap:6px;">❌ Cancelled Items (' + cancelledItems.length + ')</div>' +
+      cancelledItems.map(i =>
+        '<div style="font-size:13px;padding:8px 0;border-bottom:1px solid rgba(153,27,27,.2);display:flex;justify-content:space-between;">' +
+        '<span style="text-decoration:line-through;opacity:.85;">' + esc(i.product_name || 'Item') + ' × ' + i.qty + '</span>' +
+        '<span style="text-decoration:line-through;opacity:.85;">₱' + parseFloat(i.subtotal || 0).toFixed(2) + '</span>' +
+        '</div>'
+      ).join('') +
+      '<div style="margin-top:8px;font-size:12px;opacity:.8;">💡 These items were removed from the order.</div>' +
+    '</div>';
+  }
+
+  const safeCustomerName = jsEscape(o.customer_name || 'Customer');
+  document.getElementById('orderModalBody').innerHTML =
+    '<div style="margin-bottom:14px;">' +
+      '<div style="font-size:17px;font-weight:700;">#' + String(o.id) + '</div>' +
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:6px;">' +
+        '<span class="badge ' + (sc[o.status] || 'badge-gray') + '">' + o.status + '</span>' +
+        (cancelledItems.length > 0 ? '<span class="badge badge-red" style="display:inline-flex;align-items:center;gap:4px;">⚠️ ' + cancelledItems.length + ' Item' + (cancelledItems.length !== 1 ? 's' : '') + ' Cancelled</span>' : '') +
+      '</div>' +
+      '<div style="font-size:13px;color:var(--ink-soft);margin-top:6px;">' + date + '</div>' +
+    '</div>' +
+    '<div style="background:var(--green-light);border-radius:10px;padding:14px;margin-bottom:14px;">' +
+      '<div style="font-weight:600;margin-bottom:8px;">📍 Delivery info</div>' +
+      '<div style="font-size:14px;">' + esc(o.delivery_address || o.customer_address || '—') + '</div>' +
+      (o.customer_name ? '<div style="font-size:13px;color:var(--ink-soft);margin-top:4px;">👤 ' + esc(o.customer_name) + '</div>' : '') +
+      (o.customer_phone ? '<div style="font-size:13px;color:var(--ink-soft);">📞 ' + esc(o.customer_phone) + '</div>' : '') +
+    '</div>' +
+    '<div style="background:' + (isCOD ? 'var(--green-light)' : '#dbeafe') + ';border-radius:10px;padding:12px 14px;margin-bottom:14px;">' +
+      '<div style="font-weight:600;margin-bottom:4px;">' + (isCOD ? '💵 Cash on Delivery' : '📱 Cashless Payment') + '</div>' +
+      '<div style="font-size:13px;">Products: ₱' + productTotal.toFixed(2) + '</div>' +
+      '<div style="font-size:13px;">Delivery fee: ₱' + deliveryFee.toFixed(2) + '</div>' +
+      (tip > 0 ? '<div style="font-size:13px;color:var(--green);">Your tip: ₱' + tip.toFixed(2) + '</div>' : '') +
+      '<div style="font-size:15px;font-weight:700;margin-top:6px;">' + (isCOD ? 'Collect from customer: ' : 'Already paid: ') + '₱' + (productTotal + deliveryFee).toFixed(2) + '</div>' +
+    '</div>' +
+    '<div style="font-weight:600;margin-bottom:8px;">🛍️ Order Items</div>' +
+    (itemsHTML || '<div style="color:var(--ink-soft);padding:8px 0;font-size:13px;">No items data.</div>');
+
+  document.getElementById('orderModalFooter').innerHTML =
+    '<button class="btn btn-secondary" onclick="closeModal(\'orderModal\')">Close</button>' +
+    (canAccept ? '<button class="btn btn-primary" onclick="acceptDelivery(' + o.id + ');closeModal(\'orderModal\')">✅ Accept</button>' : '') +
+    (isMyActive ? '<button class="btn btn-accent" onclick="markDelivered(' + o.id + ');closeModal(\'orderModal\')">🏁 Mark Delivered</button>' : '') +
+    (isMyActive ? '<button class="btn btn-danger" onclick="openReport(' + o.id + ',' + (o.customer_id || 0) + ',\'' + safeCustomerName + '\')">🚩 Report</button>' : '');
+
+  document.getElementById('orderModal').classList.add('open');
+}
+
+// ── Navigate ───────────────────────────────────
+function updateNavigateTab() {
+  const card = document.getElementById('activeDeliveryInfo');
+  const mapActions = document.getElementById('mapActions');
+
+  if (!activeOrder) {
+    card.innerHTML = '<div class="card-body empty-state" style="padding:32px;"><div class="empty-state-icon">🚴</div><h4>No active delivery</h4><p>Accept an order first.</p></div>';
+    mapActions.innerHTML = '';
+    // Clear customer marker and route
+    if (custMarker) { custMarker.remove(); custMarker = null; }
+    if (routeLine)  { routeLine.remove();  routeLine = null; }
+    return;
+  }
+
+  const o = activeOrder;
+  const isCOD = (o.pay_method || 'cod') === 'cod';
+  const productTotal = parseFloat(o.total || 0);
+  const deliveryFee  = parseFloat(o.delivery_fee || 50);
+  const tip = parseFloat(o.tip_amount || 0);
+
+  card.innerHTML =
+    '<div class="card-body">' +
+    '<div style="font-size:17px;font-weight:700;margin-bottom:10px;">#' + String(o.id) + '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px;">' +
+      '<div><div style="font-weight:600;color:var(--ink-soft);">👤 Customer</div><div>' + esc(o.customer_name || '—') + '</div></div>' +
+      '<div><div style="font-weight:600;color:var(--ink-soft);">📞 Phone</div><div>' + esc(o.customer_phone || '—') + '</div></div>' +
+      '<div style="grid-column:1/-1;"><div style="font-weight:600;color:var(--ink-soft);">📍 Drop-off Address</div><div>' + esc(o.delivery_address || o.customer_address || '—') + '</div></div>' +
+      '<div><div style="font-weight:600;color:var(--ink-soft);">Payment</div><div>' + (isCOD ? '💵 COD — Collect ₱' + (productTotal + deliveryFee).toFixed(2) : '📱 Cashless — Already paid') + '</div></div>' +
+      (tip > 0 ? '<div><div style="font-weight:600;color:var(--ink-soft);">Tip</div><div style="color:var(--green);font-weight:700;">₱' + tip.toFixed(2) + '</div></div>' : '') +
+    '</div>' +
+    '</div>';
+
+  const addr = o.delivery_address || o.customer_address || '';
+  const safeCustomerName = jsEscape(o.customer_name || 'Customer');
+  mapActions.innerHTML =
+    '<button class="btn btn-primary" onclick="openGoogleMaps()">🗺️ Open Google Maps</button>' +
+    '<button class="btn btn-secondary" onclick="getRiderLocation()">📍 Update Location</button>' +
+    '<button class="btn btn-accent" onclick="markDelivered(' + o.id + ')">🏁 Mark Delivered</button>' +
+    '<button class="btn btn-danger" onclick="openReport(' + o.id + ',' + (o.customer_id || 0) + ',\'' + safeCustomerName + '\')">🚩 Report</button>';
+
+  // Draw customer pin and route on map
+  if (leafletMap && o.delivery_lat && o.delivery_lng) {
+    if (custMarker) custMarker.remove();
+    custMarker = L.marker([o.delivery_lat, o.delivery_lng], {
+      icon: L.divIcon({ className: '', html: '<div style="font-size:28px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))">📍</div>', iconAnchor: [14, 28], iconSize: [28, 28] })
+    }).addTo(leafletMap).bindPopup('<b>' + esc(o.customer_name || 'Customer') + '</b><br>' + esc(addr));
+
+    // Draw route line if we have rider location
+    if (riderLat && riderLng) {
+      if (routeLine) routeLine.remove();
+      routeLine = L.polyline(
+        [[riderLat, riderLng], [o.delivery_lat, o.delivery_lng]],
+        { color: '#1a7a3a', weight: 4, opacity: 0.7, dashArray: '8, 8' }
+      ).addTo(leafletMap);
+      leafletMap.fitBounds([[riderLat, riderLng], [o.delivery_lat, o.delivery_lng]], { padding: [40, 40] });
+    } else {
+      leafletMap.setView([o.delivery_lat, o.delivery_lng], 15);
+    }
+    custMarker.openPopup();
+  }
+}
+
+function openGoogleMaps() {
+  if (!activeOrder) return;
+  const addr = activeOrder.delivery_address || activeOrder.customer_address || '';
+  const enc  = encodeURIComponent(addr);
+  const url  = riderLat && riderLng
+    ? 'https://www.google.com/maps/dir/' + riderLat + ',' + riderLng + '/' + enc
+    : 'https://www.google.com/maps/search/' + enc;
+  window.open(url, '_blank');
+}
+
+// ── Map ────────────────────────────────────────
+function initMap() {
+  if (leafletMap) return;
+  leafletMap = L.map('deliveryMap').setView([10.3157, 123.8854], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(leafletMap);
+}
+
+function getRiderLocation() {
+  if (!navigator.geolocation) { showToast('Geolocation not supported', 'error'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    riderLat = pos.coords.latitude;
+    riderLng = pos.coords.longitude;
+    if (!leafletMap) initMap();
+    if (riderMarker) riderMarker.remove();
+    riderMarker = L.marker([riderLat, riderLng], {
+      icon: L.divIcon({ className: '', html: '<div style="font-size:28px">🛵</div>', iconAnchor: [14, 14], iconSize: [28, 28] })
+    }).addTo(leafletMap).bindPopup('📍 Your location');
+
+    // Re-draw route if there is an active delivery with coordinates
+    if (activeOrder && activeOrder.delivery_lat && activeOrder.delivery_lng) {
+      if (routeLine) routeLine.remove();
+      routeLine = L.polyline(
+        [[riderLat, riderLng], [activeOrder.delivery_lat, activeOrder.delivery_lng]],
+        { color: '#1a7a3a', weight: 4, opacity: 0.7, dashArray: '8, 8' }
+      ).addTo(leafletMap);
+      leafletMap.fitBounds([[riderLat, riderLng], [activeOrder.delivery_lat, activeOrder.delivery_lng]], { padding: [40, 40] });
+    } else {
+      leafletMap.setView([riderLat, riderLng], 15);
+    }
+
+    // Push location to API
+    api('riders/', { method: 'POST', body: JSON.stringify({ current_lat: riderLat, current_lng: riderLng }) }).catch(() => {});
+    showToast('Location updated ✓', 'success');
+  }, () => showToast('Could not get location', 'error'), { enableHighAccuracy: true, timeout: 10000 });
+}
+
+// ── Status ─────────────────────────────────────
+async function setStatus(status, { silent = false } = {}) {
+  const d = await api('riders/', { method: 'POST', body: JSON.stringify({ rider_status: status }) });
+  if (!d.ok) return showToast(d.error, 'error');
+  riderProfile = riderProfile || {};
+  riderProfile.rider_status = status;
+  updateStatusUI(status);
+  if (!silent) showToast('Status updated ✓', 'success');
+}
+
+function updateStatusUI(status) {
+  const labels  = { active: '🟢 Online', busy: '🟡 Busy', offline: '⚫ Offline' };
+  const classes = { active: 'status-active', busy: 'status-busy', offline: 'status-offline' };
+  ['statusPill', 'profileStatusPill'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = labels[status] || '⚫ Offline'; el.className = 'status-pill ' + (classes[status] || 'status-offline'); }
+  });
+}
+
+// ── Profile ────────────────────────────────────
+function previewProfileImg(input) {
+  // profile image preview/upload disabled
+  return;
+}
+
+async function saveProfile() {
+  const phone = document.getElementById('rPhone').value.trim();
+  if (phone && !isValidPHMobile(phone)) return showToast('Phone must be 10 digits starting with 9 (Philippine mobile number)', 'error');
+  const form = new FormData();
+  form.append('fname',        document.getElementById('rFName').value.trim());
+  form.append('lname',        document.getElementById('rLName').value.trim());
+  form.append('phone',        phone);
+  form.append('vehicle_type', document.getElementById('rVehicle').value);
+  // profile image uploads disabled
+  const r = await fetch(API + 'riders/', { method: 'POST', body: form });
+  const d = await r.json();
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  const name = (document.getElementById('rFName').value.trim() + ' ' + document.getElementById('rLName').value.trim()).trim();
+  document.getElementById('greetName').textContent = name.split(' ')[0];
+  document.getElementById('avatarEl').textContent  = name[0]?.toUpperCase() || 'R';
+  showToast('Profile saved ✓', 'success');
+  updateProfilePreview();
+  await loadRiderProfile();
+}
+
+function updateWalletUI() {
+  const balance = parseFloat(riderProfile?.wallet_balance || 0);
+  document.getElementById('walletBalance').textContent = '₱' + balance.toFixed(2);
+  const cashoutBalance = document.getElementById('cashoutBalance');
+  if (cashoutBalance) cashoutBalance.value = '₱' + balance.toFixed(2);
+}
+
+async function loadWalletHistory() {
+  const el = document.getElementById('walletHistoryContainer');
+  if (!el) return;
+  el.innerHTML = '<p class="text-muted">Loading…</p>';
+  const d = await api('riders/?logs=1&type=cashout');
+  if (!d.ok) { el.innerHTML = '<p class="text-muted">Could not load transactions</p>'; return; }
+  const rows = d.data || [];
+  if (!rows.length) { el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📂</div><h4>No transactions yet</h4></div>'; return; }
+  el.innerHTML = rows.map(r => {
+    const amt = parseFloat(r.amount || 0).toFixed(2);
+    const date = r.created_at ? new Date(r.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+    const sign = parseFloat(r.amount) < 0 ? '-' : '+';
+    return '<div class="history-row">' +
+      '<div>' +
+        '<div style="font-weight:600;">' + (r.type || '').toUpperCase() + '</div>' +
+        '<div style="font-size:12px;color:var(--ink-soft);">' + esc(r.description || '') + '</div>' +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        '<div style="font-weight:700;color:var(--green);">' + sign + '₱' + Math.abs(amt).toFixed(2) + '</div>' +
+        '<div style="font-size:12px;color:var(--ink-soft);">' + date + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function loadRiderProfile() {
+  const d = await api('riders/');
+  if (!d.ok) return;
+  riderProfile = d.data || {};
+  document.getElementById('rPhone').value = riderProfile.phone || '';
+  document.getElementById('rVehicle').value = riderProfile.vehicle_type || 'motorcycle';
+  updateStatusUI(riderProfile.rider_status || 'offline');
+  updateWalletUI();
+  loadWalletHistory();
+  updateProfilePreview();
+}
+
+function updateProfilePreview() {
+  const name = ((document.getElementById('rFName')?.value || '').trim() + ' ' + (document.getElementById('rLName')?.value || '').trim()).trim() || 'Rider';
+  document.getElementById('profilePreviewName').textContent = name;
+  document.getElementById('profilePreviewEmail').textContent = document.getElementById('rEmail')?.value || '—';
+  document.getElementById('profilePreviewPhone').textContent = document.getElementById('rPhone')?.value || '—';
+  document.getElementById('profilePreviewVehicle').textContent = document.getElementById('rVehicle')?.value?.replace('motorcycle','Motorcycle').replace('bicycle','Bicycle').replace('car','Car') || '—';
+  if (riderProfile?.profile_image) {
+    document.getElementById('profileImgWrap').innerHTML = '<img src="' + riderProfile.profile_image + '" alt="Profile">';
+  } else {
+    document.getElementById('profileImgWrap').innerHTML = '<span id="profileInitial">' + (name[0]?.toUpperCase() || 'R') + '</span>';
+  }
+}
+
+function toggleProfileMenu() {
+  profileMenuOpen = !profileMenuOpen;
+  document.getElementById('profileMenu').classList.toggle('open', profileMenuOpen);
+}
+
+function closeProfileMenu() {
+  profileMenuOpen = false;
+  document.getElementById('profileMenu').classList.remove('open');
+}
+
+function openCashoutModal() {
+  if (!riderProfile) return;
+  document.getElementById('cashoutAmount').value = '';
+  document.getElementById('cashoutBalance').value = '₱' + parseFloat(riderProfile.wallet_balance || 0).toFixed(2);
+  document.getElementById('cashoutModal').classList.add('open');
+}
+
+async function submitCashout() {
+  const amount = parseFloat(document.getElementById('cashoutAmount').value);
+  const gcash = (document.getElementById('gcashNumber')?.value || '').trim();
+  const pin = (document.getElementById('gcashPin')?.value || '').trim();
+  if (!amount || amount <= 0) return showToast('Enter a valid cashout amount', 'error');
+  if (amount > parseFloat(riderProfile.wallet_balance || 0)) return showToast('Insufficient wallet balance', 'error');
+  if (!/^[0-9]{10}$/.test(gcash)) return showToast('Enter a valid 10-digit GCash number', 'error');
+  if (!/^[0-9]{4,6}$/.test(pin)) return showToast('Enter a valid PIN (4-6 digits)', 'error');
+
+  // Simulate verification step (play only) and send request to server to record cashout
+  const d = await api('riders/', { method: 'POST', body: JSON.stringify({ cashout_amount: amount, gcash_number: gcash }) });
+  if (!d.ok) return showToast(d.error || 'Cashout failed', 'error');
+  showToast('Transaction Successful', 'success');
+  closeModal('cashoutModal');
+  await loadRiderProfile();
+  await loadWalletHistory();
+}
+
+function checkPwStrength(pw) {
+  const wrap = document.getElementById('pwStrengthWrap'), bar = document.getElementById('pwBar'), lbl = document.getElementById('pwLabel');
+  if (!pw) { wrap.classList.remove('show'); return; } wrap.classList.add('show');
+  let s = 0; if (pw.length >= 8) s++; if (pw.length >= 12) s++; if (/[A-Z]/.test(pw)) s++; if (/[0-9]/.test(pw)) s++; if (/[^A-Za-z0-9]/.test(pw)) s++;
+  const lvls = [{ p: '20%', c: '#ef4444', l: 'Too weak' }, { p: '40%', c: '#f97316', l: 'Weak' }, { p: '60%', c: '#eab308', l: 'Fair' }, { p: '80%', c: '#22c55e', l: 'Good' }, { p: '100%', c: '#16a34a', l: 'Strong' }];
+  const lvl = lvls[Math.min(s, 4)]; bar.style.width = lvl.p; bar.style.background = lvl.c; lbl.textContent = lvl.l; lbl.style.color = lvl.c;
+}
+
+async function changePassword() {
+  const old = document.getElementById('oldPw').value;
+  const pw  = document.getElementById('newPw').value;
+  const conf = document.getElementById('confirmPw').value;
+  if (!old || !pw) return showToast('Fill in all fields', 'error');
+  if (pw.length < 8) return showToast('Password must be at least 8 characters', 'error');
+  if (pw !== conf) return showToast('Passwords do not match', 'error');
+  const d = await api('auth/?action=change_password', { method: 'POST', body: JSON.stringify({ old_password: old, new_password: pw, confirm: conf }) });
+  if (!d.ok) return showToast(d.error || 'Failed', 'error');
+  showToast('Password changed ✓', 'success');
+  ['oldPw', 'newPw', 'confirmPw'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pwStrengthWrap').classList.remove('show');
+}
+
+// ── Tab nav ────────────────────────────────────
+function showTab(tab) {
+  ['overview', 'deliveries', 'history', 'earnings', 'navigate', 'ewallet', 'profile'].forEach(t => {
+    const tabEl = document.getElementById('tab-' + t);
+    if (tabEl) tabEl.style.display = t === tab ? 'block' : 'none';
+    document.getElementById('nav-' + t)?.classList.toggle('active', t === tab);
+  });
+  closeProfileMenu();
+  if (tab === 'navigate') { setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 200); updateNavigateTab(); }
+  if (tab === 'deliveries') renderDeliveriesList();
+  if (tab === 'earnings') renderEarnings();
+  if (tab === 'history') renderHistory();
+  if (tab === 'ewallet' || tab === 'profile') loadRiderProfile();
+}
+
+function setFilter(btn, status) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = status;
+  renderDeliveriesList();
+}
+
+async function doLogout() { await fetch(API + 'auth/?action=logout', { method: 'POST' }); window.location.href = '../login.html'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); }));
+document.addEventListener('click', e => { if (!e.target.closest('.profile-wrap')) closeProfileMenu(); });
+function handlePhoneInput(input) {
+  const digits = input.value.replace(/\D/g,'').slice(0,10);
+  if (input.value !== digits) input.value = digits;
+  const hint = document.getElementById(input.id + 'Hint');
+  if (!hint) return;
+  if (!digits) {
+    hint.textContent = 'Philippine number — 10 digits starting with 9 (e.g. 9171234567)';
+    hint.style.color = 'var(--ink-soft)';
+    return;
+  }
+  if (!digits.startsWith('9')) {
+    hint.textContent = 'Phone number must start with 9 after +63.';
+    hint.style.color = 'var(--red)';
+    return;
+  }
+  if (digits.length < 10) {
+    hint.textContent = 'Enter exactly 10 digits, no letters or symbols.';
+    hint.style.color = 'var(--red)';
+    return;
+  }
+  hint.textContent = '✓ Valid Philippine number: +63 ' + digits;
+  hint.style.color = 'var(--green)';
+}
+
+function isValidPHMobile(raw) {
+  return /^9\d{9}$/.test(raw.replace(/\D/g,''));
+}
+
+function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'show ' + type; setTimeout(() => t.className = '', 3200); }
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function jsEscape(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r'); }
+</script>
+</body>
+</html>

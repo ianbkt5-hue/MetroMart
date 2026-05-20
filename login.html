@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — MetroMart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green:#1a7a3a; --green-mid:#228844; --green-light:#f0f9f3;
+  --green-glow:#2db055; --ink:#0f1a12; --ink-soft:#5a6b5c;
+  --stone:#f6f5f1; --stone-mid:#ede9e1; --stone-dark:#d4cfc4;
+  --white:#ffffff; --red:#c0392b;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{font-family:'DM Sans',sans-serif;display:flex;min-height:100vh;background:var(--stone);}
+
+.panel-left{flex:1;background:var(--ink);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:56px 52px;min-height:100vh;}
+.panel-left::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 30% 60%,rgba(26,122,58,.35) 0%,transparent 65%),radial-gradient(ellipse 50% 40% at 80% 20%,rgba(45,176,85,.15) 0%,transparent 60%);}
+.deco-circle{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.07);}
+.deco-circle.a{width:560px;height:560px;top:-140px;right:-180px;}
+.deco-circle.b{width:320px;height:320px;top:60px;right:-60px;}
+.deco-circle.c{width:160px;height:160px;bottom:120px;left:-40px;}
+.float-cards{position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);display:flex;flex-direction:column;gap:14px;z-index:1;}
+.fcard{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);border-radius:16px;padding:14px 20px;display:flex;align-items:center;gap:16px;backdrop-filter:blur(8px);animation:floatUp 6s ease-in-out infinite;}
+.fcard:nth-child(2){animation-delay:-2s;margin-left:32px;}
+.fcard:nth-child(3){animation-delay:-4s;margin-left:12px;}
+@keyframes floatUp{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.fcard-icon{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.fcard-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.85);margin-bottom:2px;}
+.fcard-sub{font-size:11px;color:rgba(255,255,255,.4);}
+.fcard-price{margin-left:auto;font-family:'Fraunces',serif;font-size:17px;font-weight:400;color:#4ade80;}
+.panel-left-content{position:relative;z-index:2;}
+.brand{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:var(--white);letter-spacing:-.5px;margin-bottom:56px;}
+.brand-dot{color:var(--green-glow);}
+.panel-headline{font-family:'Fraunces',serif;font-size:48px;font-weight:300;color:var(--white);line-height:1.1;letter-spacing:-1.5px;margin-bottom:20px;}
+.panel-headline em{font-style:italic;color:var(--green-glow);}
+.panel-sub{font-size:15px;color:rgba(255,255,255,.45);line-height:1.65;max-width:340px;margin-bottom:36px;}
+.stats-row{display:flex;gap:32px;}
+.stat-item .stat-num{font-family:'Fraunces',serif;font-size:26px;font-weight:400;color:var(--white);line-height:1;}
+.stat-item .stat-lbl{font-size:12px;color:rgba(255,255,255,.35);margin-top:4px;text-transform:uppercase;letter-spacing:.6px;}
+
+.panel-right{width:480px;flex-shrink:0;background:var(--white);display:flex;flex-direction:column;justify-content:center;padding:60px 52px;position:relative;overflow-y:auto;min-height:100vh;}
+.panel-right::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--green),var(--green-glow));}
+
+/* Login panel */
+.form-head{margin-bottom:32px;}
+.form-head h1{font-family:'Fraunces',serif;font-size:30px;font-weight:400;color:var(--ink);letter-spacing:-.5px;margin-bottom:8px;}
+.form-head p{font-size:14px;color:var(--ink-soft);}
+
+.error-banner{display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:500;color:var(--red);margin-bottom:20px;}
+.error-banner.show{display:block;}
+.success-banner{display:none;background:var(--green-light);border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;font-size:13px;font-weight:500;color:var(--green);margin-bottom:20px;}
+.success-banner.show{display:flex;align-items:center;gap:8px;}
+
+.field{margin-bottom:20px;}
+.field label{display:block;font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:8px;}
+.input-wrap{position:relative;}
+.input-wrap input{width:100%;height:50px;padding:0 16px 0 44px;border:1.5px solid var(--stone-dark);border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--ink);background:var(--stone);outline:none;transition:border-color .18s,background .18s,box-shadow .18s;}
+.input-wrap input:focus{border-color:var(--green-mid);background:var(--white);box-shadow:0 0 0 3px rgba(34,136,68,.1);}
+.input-wrap input::placeholder{color:var(--stone-dark);}
+.input-wrap input[type="password"]::-ms-reveal,
+.input-wrap input[type="password"]::-ms-clear,
+.input-wrap input[type="password"]::-webkit-textfield-decoration-container {
+  display: none !important;
+}
+.input-wrap.no-icon input{padding-left:16px;}
+.input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-soft);pointer-events:none;}
+.toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-soft);padding:4px;line-height:1;transition:color .15s;}
+.toggle-pw:hover{color:var(--ink);}
+
+.forgot-link{display:block;text-align:right;font-size:13px;font-weight:600;color:var(--green);margin-top:-10px;margin-bottom:20px;cursor:pointer;transition:opacity .15s;background:none;border:none;font-family:inherit;}
+.forgot-link:hover{opacity:.7;}
+
+.btn-submit{width:100%;height:52px;background:var(--green);color:var(--white);border:none;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .18s,transform .12s;margin-top:8px;position:relative;overflow:hidden;}
+.btn-submit::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.12) 0%,transparent 50%);}
+.btn-submit:hover{background:var(--green-mid);transform:translateY(-1px);}
+.btn-submit:active{transform:translateY(0);}
+.btn-submit:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+.or-row{display:flex;align-items:center;gap:16px;margin:24px 0;}
+.or-line{flex:1;height:1px;background:var(--stone-mid);}
+.or-text{font-size:13px;color:var(--stone-dark);font-weight:500;}
+
+.form-foot{text-align:center;font-size:14px;color:var(--ink-soft);}
+.form-foot a{color:var(--green);font-weight:600;text-decoration:none;}
+.form-foot a:hover{text-decoration:underline;}
+.back-link{display:block;text-align:center;margin-top:20px;font-size:13px;}
+.back-link a{color:var(--ink-soft);text-decoration:none;font-weight:500;}
+.back-link a:hover{color:var(--ink);}
+
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+.btn-submit.loading .spinner{display:block;}
+.btn-submit.loading .btn-text{display:none;}
+
+/* Forgot password panel */
+.step{display:none;}
+.step.active{display:block;}
+.step-indicator{display:flex;gap:6px;margin-bottom:24px;align-items:center;}
+.si-dot{height:4px;border-radius:2px;background:var(--stone-mid);transition:all .3s;}
+.si-dot.done{background:var(--green);width:24px;}
+.si-dot:not(.done){width:8px;}
+
+.back-to-login{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;background:none;border:none;font-family:inherit;margin-bottom:20px;padding:0;transition:color .15s;}
+.back-to-login:hover{color:var(--ink);}
+
+@media(max-width:900px){.panel-left{display:none;}.panel-right{width:100%;padding:48px 32px;}}
+@media(max-width:480px){.panel-right{padding:40px 24px;}}
+</style>
+</head>
+<body>
+
+<div class="panel-left" aria-hidden="true">
+  <div class="deco-circle a"></div>
+  <div class="deco-circle b"></div>
+  <div class="deco-circle c"></div>
+  <div class="float-cards">
+    <div class="fcard"><div class="fcard-icon">🥦</div><div><div class="fcard-name">Fresh Produce</div><div class="fcard-sub">Locally sourced</div></div><div class="fcard-price">₱45</div></div>
+    <div class="fcard"><div class="fcard-icon">🥛</div><div><div class="fcard-name">Fresh Milk 1L</div><div class="fcard-sub">Full cream</div></div><div class="fcard-price">₱89</div></div>
+    <div class="fcard"><div class="fcard-icon">🥩</div><div><div class="fcard-name">Chicken Breast</div><div class="fcard-sub">1kg · boneless</div></div><div class="fcard-price">₱199</div></div>
+  </div>
+  <div class="panel-left-content">
+    <div class="brand">Metro<span class="brand-dot">Mart</span></div>
+    <h2 class="panel-headline">Fresh <em>groceries,</em><br>30 minutes away.</h2>
+    <p class="panel-sub">Order from your favourite local stores and get everything delivered straight to your door.</p>
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-num">3+</div><div class="stat-lbl">Stores</div></div>
+      <div class="stat-item"><div class="stat-num">15+</div><div class="stat-lbl">Products</div></div>
+      <div class="stat-item"><div class="stat-num">30<span style="font-size:16px;opacity:.5;">min</span></div><div class="stat-lbl">Avg delivery</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel-right">
+
+  <!-- ── LOGIN PANEL ── -->
+  <div id="panelLogin">
+    <div class="form-head">
+      <h1>Welcome back</h1>
+      <p>Sign in to your MetroMart account</p>
+    </div>
+
+    <div class="error-banner" id="loginError"></div>
+
+    <div class="field">
+      <label for="email">Email address</label>
+      <div class="input-wrap">
+        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        <input type="email" id="email" placeholder="you@email.com" autocomplete="email">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="password">Password</label>
+      <div class="input-wrap">
+        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+        <button class="toggle-pw" type="button" onclick="togglePw('password','loginEye')" aria-label="Show/hide password">
+          <svg id="loginEye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <button class="forgot-link" type="button" onclick="switchPanel('forgot')">Forgot your password?</button>
+
+    <button class="btn-submit" id="loginBtn" onclick="doLogin()">
+      <div class="spinner"></div>
+      <span class="btn-text">Sign In</span>
+      <svg class="btn-text" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+    </button>
+
+    <div class="or-row"><div class="or-line"></div><span class="or-text">or</span><div class="or-line"></div></div>
+    <div class="form-foot">Don't have an account? <a href="register.html">Sign up free →</a></div>
+    <div class="back-link"><a href="index.html">← Back to MetroMart</a></div>
+  </div>
+
+  <!-- ── FORGOT PASSWORD PANEL ── -->
+  <div id="panelForgot" style="display:none;">
+
+    <button class="back-to-login" onclick="switchPanel('login')">← Back to Sign In</button>
+
+    <div class="form-head">
+      <h1>Reset password</h1>
+      <p>Verify your identity using your security question</p>
+    </div>
+
+    <div class="error-banner" id="fpError"></div>
+    <div class="success-banner" id="fpSuccess">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="fpSuccessMsg"></span>
+    </div>
+
+    <div class="step-indicator">
+      <div class="si-dot done" id="sd1"></div>
+      <div class="si-dot" id="sd2"></div>
+      <div class="si-dot" id="sd3"></div>
+    </div>
+
+    <!-- Step 1: Email -->
+    <div class="step active" id="fp-step1">
+      <div class="field">
+        <label for="fpEmail">Your registered email</label>
+        <div class="input-wrap">
+          <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          <input type="email" id="fpEmail" placeholder="you@email.com">
+        </div>
+      </div>
+      <button class="btn-submit" id="fpStep1Btn" onclick="fpStep1()">
+        <div class="spinner"></div>
+        <span class="btn-text">Continue →</span>
+      </button>
+    </div>
+
+    <!-- Step 2: Security question -->
+    <div class="step" id="fp-step2">
+      <div class="field">
+        <label>Your security question</label>
+        <div style="background:var(--green-light);border:1.5px solid #bbf7d0;border-radius:12px;padding:14px 16px;font-size:14px;color:var(--ink);font-weight:500;" id="fpQuestionDisplay">Loading…</div>
+      </div>
+      <div class="field">
+        <label for="fpAnswer">Your answer</label>
+        <div class="input-wrap no-icon"><input type="text" id="fpAnswer" placeholder="Enter your answer"></div>
+      </div>
+      <button class="btn-submit" id="fpStep2Btn" onclick="fpStep2()">
+        <div class="spinner"></div>
+        <span class="btn-text">Verify →</span>
+      </button>
+      <div style="margin-top:12px;text-align:center;"><span style="font-size:13px;color:var(--ink-soft);cursor:pointer;" onclick="fpGoToStep(1)">← Back</span></div>
+    </div>
+
+    <!-- Step 3: New password -->
+    <div class="step" id="fp-step3">
+      <div class="field">
+        <label for="fpNewPass">New password <span style="color:var(--ink-soft);font-size:11px;text-transform:none;letter-spacing:0;">(minimum 8 characters)</span></label>
+        <div class="input-wrap">
+          <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="fpNewPass" placeholder="At least 8 characters">
+          <button class="toggle-pw" type="button" onclick="togglePw('fpNewPass','fpEye')">
+            <svg id="fpEye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="fpConfirmPass">Confirm new password</label>
+        <div class="input-wrap">
+          <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <input type="password" id="fpConfirmPass" placeholder="Repeat new password">
+          <button class="toggle-pw" type="button" onclick="togglePw('fpConfirmPass','fpConfirmEye')">
+            <svg id="fpConfirmEye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button class="btn-submit" id="fpStep3Btn" onclick="fpStep3()">
+        <div class="spinner"></div>
+        <span class="btn-text">Reset Password</span>
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const eyeOpenSVG='<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+const eyeCloseSVG='<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+function togglePw(iId,eId){const input=document.getElementById(iId);const icon=document.getElementById(eId);if(!input||!icon) return;const show=input.type==='password';input.type=show?'text':'password';icon.innerHTML=show?eyeCloseSVG:eyeOpenSVG;}
+
+function switchPanel(panel){
+  const isLogin=panel==='login';
+  document.getElementById('panelLogin').style.display=isLogin?'block':'none';
+  document.getElementById('panelForgot').style.display=isLogin?'none':'block';
+  if(!isLogin) fpGoToStep(1);
+}
+
+async function doLogin(){
+  const email=document.getElementById('email').value.trim();
+  const pass=document.getElementById('password').value;
+  const btn=document.getElementById('loginBtn');
+  const err=document.getElementById('loginError');
+  err.classList.remove('show');
+  if(!email||!pass) return showErr(err,'Please fill in all fields.');
+  btn.classList.add('loading'); btn.disabled=true;
+  try{
+    const res=await fetch('api/auth/?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const data=await res.json();
+    if(!data.ok){showErr(err,data.error||'Login failed.');}
+    else{window.location.href=data.data.redirect;return;}
+  }catch(e){showErr(err,'Network error — is XAMPP running?');}
+  btn.classList.remove('loading'); btn.disabled=false;
+}
+
+function showErr(el,msg){el.textContent='⚠ '+msg;el.classList.add('show');}
+
+let fpStep=1, fpToken='', fpUserId=0;
+
+function fpGoToStep(n){
+  fpStep=n;
+  document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('active',i+1===n));
+  ['sd1','sd2','sd3'].forEach((id,i)=>document.getElementById(id).classList.toggle('done',i<n));
+  document.getElementById('fpError').classList.remove('show');
+  document.getElementById('fpSuccess').classList.remove('show');
+}
+
+async function fpStep1(){
+  const email=document.getElementById('fpEmail').value.trim();
+  const btn=document.getElementById('fpStep1Btn');
+  const err=document.getElementById('fpError');
+  err.classList.remove('show');
+  if(!email) return showErr(err,'Please enter your email address.');
+  btn.classList.add('loading'); btn.disabled=true;
+  try{
+    const res=await fetch('api/auth/?action=forgot_step1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const data=await res.json();
+    if(!data.ok){showErr(err,data.error||'Email not found.');}
+    else{fpUserId=data.data.user_id;document.getElementById('fpQuestionDisplay').textContent=data.data.question;fpGoToStep(2);}
+  }catch(e){showErr(err,'Network error.');}
+  btn.classList.remove('loading'); btn.disabled=false;
+}
+
+async function fpStep2(){
+  const answer=document.getElementById('fpAnswer').value.trim();
+  const btn=document.getElementById('fpStep2Btn');
+  const err=document.getElementById('fpError');
+  err.classList.remove('show');
+  if(!answer) return showErr(err,'Please enter your answer.');
+  btn.classList.add('loading'); btn.disabled=true;
+  try{
+    const res=await fetch('api/auth/?action=forgot_step2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:fpUserId,answer})});
+    const data=await res.json();
+    if(!data.ok){showErr(err,data.error||'Incorrect answer.');}
+    else{fpToken=data.data.token;fpGoToStep(3);}
+  }catch(e){showErr(err,'Network error.');}
+  btn.classList.remove('loading'); btn.disabled=false;
+}
+
+async function fpStep3(){
+  const pass=document.getElementById('fpNewPass').value;
+  const confirm=document.getElementById('fpConfirmPass').value;
+  const btn=document.getElementById('fpStep3Btn');
+  const err=document.getElementById('fpError');
+  err.classList.remove('show');
+  if(!pass||pass.length<8) return showErr(err,'Password must be at least 8 characters.');
+  if(pass!==confirm) return showErr(err,'Passwords do not match.');
+  btn.classList.add('loading'); btn.disabled=true;
+  try{
+    const res=await fetch('api/auth/?action=reset_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:fpToken,password:pass})});
+    const data=await res.json();
+    if(!data.ok){showErr(err,data.error||'Reset failed.');}
+    else{
+      const s=document.getElementById('fpSuccess');
+      document.getElementById('fpSuccessMsg').textContent='Password reset! Redirecting to login…';
+      s.classList.add('show');
+      setTimeout(()=>switchPanel('login'),2000);
+    }
+  }catch(e){showErr(err,'Network error.');}
+  btn.classList.remove('loading'); btn.disabled=false;
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(document.getElementById('panelLogin').style.display!=='none') doLogin();
+    else if(fpStep===1) fpStep1();
+    else if(fpStep===2) fpStep2();
+    else if(fpStep===3) fpStep3();
+  }
+});
+</script>
+</body>
+</html>

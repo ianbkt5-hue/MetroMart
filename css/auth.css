@@ -1,0 +1,61 @@
+/* =============================================
+   METROMART — Auth Pages (login.html, register.html)
+   ============================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --green:       #1a9e3f;
+  --green-dark:  #147830;
+  --green-light: #e8f7ed;
+  --gray-100:    #f3f4f6;
+  --gray-200:    #e5e7eb;
+  --gray-400:    #9ca3af;
+  --gray-600:    #4b5563;
+  --gray-800:    #1f2937;
+  --red:         #ef4444;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(135deg, #0d6e28 0%, #1f2937 100%);
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+
+.card { background: #fff; border-radius: 20px; padding: 40px; width: 100%; max-width: 420px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.card-wide { max-width: 480px; }
+
+.logo { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; color: var(--green); text-align: center; margin-bottom: 6px; }
+.logo span { color: var(--gray-800); }
+.subtitle { text-align: center; color: var(--gray-400); font-size: 14px; margin-bottom: 30px; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; color: var(--gray-600); }
+.form-control { width: 100%; border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 10px 13px; font-size: 15px; outline: none; transition: border-color .18s; font-family: inherit; }
+.form-control:focus { border-color: var(--green); }
+.form-control:disabled { background: var(--gray-100); color: var(--gray-400); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.btn-submit { width: 100%; background: var(--green); color: #fff; border: none; padding: 13px; border-radius: 10px; font-size: 16px; font-weight: 800; cursor: pointer; transition: all .18s; margin-top: 8px; font-family: inherit; }
+.btn-submit:hover { background: var(--green-dark); }
+.btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+.divider { text-align: center; color: var(--gray-400); font-size: 13px; margin: 18px 0; position: relative; }
+.divider::before, .divider::after { content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: var(--gray-200); }
+.divider::before { left: 0; }
+.divider::after  { right: 0; }
+
+.link-row { text-align: center; font-size: 14px; color: var(--gray-600); margin-top: 16px; }
+.link-row a { color: var(--green); font-weight: 700; text-decoration: none; }
+.link-row a:hover { text-decoration: underline; }
+
+.back-link { display: block; text-align: center; margin-top: 14px; font-size: 13px; }
+.back-link a { color: var(--gray-400); text-decoration: none; font-weight: 600; }
+.back-link a:hover { text-decoration: underline; }
+
+.error-msg { background: #fee2e2; color: #991b1b; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-bottom: 14px; display: none; }
+.success-msg { background: #dcfce7; color: #15803d; border-radius: 8px; padding: 10px 14px; font-size: 13px; font-weight: 600; margin-bottom: 14px; display: none; }
