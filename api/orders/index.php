@@ -100,13 +100,11 @@ switch ($method) {
                  LEFT JOIN customer_reports cr ON cr.id = (
                      SELECT id FROM customer_reports WHERE order_id = o.id ORDER BY created_at DESC LIMIT 1
                  )
-                 WHERE (o.status = 'Ready for Delivery' AND (
-                        SELECT COALESCE(rider_status, 'offline') FROM riders WHERE id = ?
-                 ) != 'offline')
+                 WHERE o.status = 'Ready for Delivery'
                  OR o.rider_id = ?
                  ORDER BY o.ordered_at DESC LIMIT 100"
             );
-            $s->execute([$user['id'], $user['id']]);
+            $s->execute([$user['id']]);
 
         } else {
             // admin

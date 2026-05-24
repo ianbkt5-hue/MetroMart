@@ -1032,65 +1032,30 @@ function renderOrders(orders) {
     other: 'Other'
   };
 
-  const groups = {};
-  orders.forEach(o => {
-    const key = [o.ordered_at || '', o.delivery_address || '', o.pay_method || '', o.merchant_id || ''].join('||');
-    if (!groups[key]) {
-      groups[key] = {
-        orders: [],
-        items: [],
-        subtotal: 0,
-        delivery_fee: 0,
-        tip_amount: 0,
-        grand_total: 0,
-        ordered_at: o.ordered_at,
-        delivery_address: o.delivery_address || ''
-      };
-    }
-    groups[key].orders.push(o);
-    groups[key].items = groups[key].items.concat(o.items || []);
-    groups[key].subtotal += parseFloat(o.total || 0);
-    groups[key].delivery_fee += parseFloat(o.delivery_fee || 0);
-    groups[key].tip_amount += parseFloat(o.tip_amount || 0);
-    groups[key].grand_total += (
-      parseFloat(o.total || 0) + parseFloat(o.delivery_fee || 0) + parseFloat(o.tip_amount || 0)
-    );
-  });
-
-  const groupedOrders = Object.values(groups);
-
-  document.getElementById('ordersContainer').innerHTML = groupedOrders.map(group => {
-    const firstOrder = group.orders[0];
-    const date = group.ordered_at ? new Date(group.ordered_at).toLocaleString('en-PH', {
+  document.getElementById('ordersContainer').innerHTML = orders.map(order => {
+    const date = order.ordered_at ? new Date(order.ordered_at).toLocaleString('en-PH', {
       year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     }) : '—';
-    const orderLabel = group.orders.length > 1
-      ? 'Order #' + String(firstOrder.id).padStart(6, '0') + ' + ' + (group.orders.length - 1) + ' more'
-      : 'Order #' + String(firstOrder.id).padStart(6, '0');
-    const merchantName = firstOrder.merchant_name || 'Store';
+    const orderLabel = 'Order #' + String(order.id).padStart(6, '0');
+    const merchantName = order.merchant_name || 'Store';
 
-    const statusLabels = group.orders.map(o =>
-      '<span class="order-status-badge ' + (sc[o.status] || '') + '">' + esc(o.merchant_name || 'Store') + ': ' + o.status + '</span>'
-    ).join(' ');
-
-    const hasDelivered = group.orders.some(o => o.status === 'Delivered' || o.delivered_at);
-    const hasArrived = group.orders.some(o => o.arrived_at);
+    const statusLabels = '<span class="order-status-badge ' + (sc[order.status] || '') + '">' + esc(order.merchant_name || 'Store') + ': ' + order.status + '</span>';
+    const hasDelivered = order.status === 'Delivered' || order.delivered_at;
+    const hasArrived = order.arrived_at;
     const arrivedNote = hasDelivered
       ? '<div class="order-arrived-note" style="font-size:13px;margin-top:8px;padding:10px 14px;border:1px solid var(--green);border-radius:10px;background:rgba(220,252,231,.9);color:var(--green);">✅ Delivered successfully!</div>'
       : (hasArrived ? '<div class="order-arrived-note" style="font-size:13px;margin-top:8px;padding:10px 14px;border:1px solid var(--green);border-radius:10px;background:rgba(209,250,229,.4);color:var(--green);">🚴 Rider has arrived for this order.</div>' : '');
 
-    const reportOrder = group.orders.find(o => o.report_id);
-    const reportActionButton = reportOrder ?
-      '<button class="btn btn-sm btn-secondary" onclick="openReportReplyModal(' + reportOrder.id + ',' + reportOrder.report_id + ')">' +
-        (reportOrder.report_customer_reply ? 'Update reply' : 'Reply to report') +
+    const reportActionButton = order.report_id ?
+      '<button class="btn btn-sm btn-secondary" onclick="openReportReplyModal(' + order.id + ',' + order.report_id + ')">' +
+        (order.report_customer_reply ? 'Update reply' : 'Reply to report') +
       '</button>' : '';
 
-    const pendingOrderIds = group.orders.filter(o => o.status === 'Pending').map(o => o.id);
-    const groupActions = pendingOrderIds.length > 0 ?
-      '<button class="btn btn-sm btn-danger" onclick="cancelGroupOrders(\'' + pendingOrderIds.join(',') + '\')">' +
-        (pendingOrderIds.length > 1 ? 'Cancel All' : 'Cancel') +
-      '</button>' : '';
+    const groupActions = order.status === 'Pending'
+      ? '<button class="btn btn-sm btn-danger" onclick="cancelOrder(' + order.id + ')">Cancel</button>'
+      : '';
 
+    const items = order.items || [];
     return '<div class="order-card">' +
       '<div class="order-header">' +
         '<div class="order-header-left">' +
@@ -1100,53 +1065,44 @@ function renderOrders(orders) {
         '</div>' +
         '<div class="order-status-group">' + statusLabels + '</div>' +
       '</div>' +
-      (group.delivery_address ? '<div class="order-addr-pill">📍 ' + esc(group.delivery_address) + '</div>' : '') +
+      (order.delivery_address ? '<div class="order-addr-pill">📍 ' + esc(order.delivery_address) + '</div>' : '') +
       arrivedNote +
       '<div style="margin:14px 0;">' +
-        (group.items.length ? (() => {
-          const orderStatus = {};
-          const orderSeen = {};
-          group.orders.forEach(o => { orderStatus[o.id] = o; });
-          return group.items.map(item => {
-            const order = orderStatus[item.order_id] || {};
-            const itemSubtotal = parseFloat(item.subtotal || (parseFloat(item.unit_price || 0) * parseInt(item.qty || 1)));
-            const canCancelItem = order.status === 'Pending' && item.status !== 'Cancelled';
-            const isCancelled = item.status === 'Cancelled';
-            const showOrderButton = !orderSeen[item.order_id];
-            if (showOrderButton) orderSeen[item.order_id] = true;
-            const viewRiderButton = showOrderButton && order.rider_id
-              ? '<button class="btn btn-sm btn-secondary" onclick="openRiderModal(' + item.order_id + ')">View Rider</button>'
-              : '';
-            const reportLabel = order.report_id ?
-              '<div class="order-item-note">' +
-                '<strong>🚩 Rider report:</strong> This order was cancelled by the rider' +
-                (order.report_reason ? ' for ' + esc(reasonLabels[order.report_reason] || order.report_reason) : '') +
-                '. Admin will review the report.' +
-              '</div>' : '';
-            const reportReply = order.report_id && order.report_customer_reply ?
-              '<div class="order-item-reply">' +
-                '<strong>Your reply:</strong> ' + esc(order.report_customer_reply) +
-              '</div>' : '';
-            return '<div class="order-item-row" style="' + (isCancelled ? 'opacity:0.65;' : '') + '">' +
-              '<div class="order-item-main">' +
-                '<div class="order-item-title">' + esc(item.product_name || 'Item') + ' × ' + (item.qty || 1) + '</div>' +
-                '<div class="order-item-meta">' +
-                  (isCancelled ? '<span class="order-item-status" style="font-size:12px;padding:4px 8px;background:#fee2e2;color:#991b1b;border-radius:999px;">CANCELLED</span>' : '') +
-                  '<span class="order-item-price">₱' + itemSubtotal.toFixed(2) + '</span>' +
-                  '<div class="order-item-actions">' + viewRiderButton + '</div>' +
-                '</div>' +
+        (items.length ? items.map(item => {
+          const itemSubtotal = parseFloat(item.subtotal || (parseFloat(item.unit_price || 0) * parseInt(item.qty || 1)));
+          const isCancelled = item.status === 'Cancelled';
+          const viewRiderButton = order.rider_id
+            ? '<button class="btn btn-sm btn-secondary" onclick="openRiderModal(' + order.id + ')">View Rider</button>'
+            : '';
+          const reportLabel = order.report_id ?
+            '<div class="order-item-note">' +
+              '<strong>🚩 Rider report:</strong> This order was cancelled by the rider' +
+              (order.report_reason ? ' for ' + esc(reasonLabels[order.report_reason] || order.report_reason) : '') +
+              '. Admin will review the report.' +
+            '</div>' : '';
+          const reportReply = order.report_id && order.report_customer_reply ?
+            '<div class="order-item-reply">' +
+              '<strong>Your reply:</strong> ' + esc(order.report_customer_reply) +
+            '</div>' : '';
+          return '<div class="order-item-row" style="' + (isCancelled ? 'opacity:0.65;' : '') + '">' +
+            '<div class="order-item-main">' +
+              '<div class="order-item-title">' + esc(item.product_name || 'Item') + ' × ' + (item.qty || 1) + '</div>' +
+              '<div class="order-item-meta">' +
+                (isCancelled ? '<span class="order-item-status" style="font-size:12px;padding:4px 8px;background:#fee2e2;color:#991b1b;border-radius:999px;">CANCELLED</span>' : '') +
+                '<span class="order-item-price">₱' + itemSubtotal.toFixed(2) + '</span>' +
+                '<div class="order-item-actions">' + viewRiderButton + '</div>' +
               '</div>' +
-              reportLabel +
-              reportReply +
-            '</div>';
-          }).join('');
-        })() : '<div style="color:var(--ink-soft);font-style:italic;padding:8px 0;font-size:13px;">Loading items…</div>') +
+            '</div>' +
+            reportLabel +
+            reportReply +
+          '</div>';
+        }).join('') : '<div style="color:var(--ink-soft);font-style:italic;padding:8px 0;font-size:13px;">Loading items…</div>') +
       '</div>' +
       '<div class="order-card-footer">' +
-        '<div class="order-summary-row"><span>Subtotal</span><span>₱' + group.subtotal.toFixed(2) + '</span></div>' +
-        '<div class="order-summary-row"><span>Delivery fee</span><span>₱' + group.delivery_fee.toFixed(2) + '</span></div>' +
-        (group.tip_amount > 0 ? '<div class="order-summary-row"><span>Tip to rider</span><span>₱' + group.tip_amount.toFixed(2) + '</span></div>' : '') +
-        '<div class="order-summary-total"><span>Total</span><span>₱' + group.grand_total.toFixed(2) + '</span></div>' +
+        '<div class="order-summary-row"><span>Subtotal</span><span>₱' + parseFloat(order.total || 0).toFixed(2) + '</span></div>' +
+        '<div class="order-summary-row"><span>Delivery fee</span><span>₱' + parseFloat(order.delivery_fee || 0).toFixed(2) + '</span></div>' +
+        (parseFloat(order.tip_amount || 0) > 0 ? '<div class="order-summary-row"><span>Tip to rider</span><span>₱' + parseFloat(order.tip_amount || 0).toFixed(2) + '</span></div>' : '') +
+        '<div class="order-summary-total"><span>Total</span><span>₱' + (parseFloat(order.total || 0) + parseFloat(order.delivery_fee || 0) + parseFloat(order.tip_amount || 0)).toFixed(2) + '</span></div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-top:12px;">' +
           reportActionButton +
           groupActions +

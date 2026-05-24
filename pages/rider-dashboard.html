@@ -1023,7 +1023,10 @@ async function setStatus(status, { silent = false } = {}) {
   riderProfile = riderProfile || {};
   riderProfile.rider_status = status;
   updateStatusUI(status);
-  if (!silent) showToast('Status updated ✓', 'success');
+  if (!silent) {
+    showToast('Status updated ✓', 'success');
+    await loadDeliveries();
+  }
 }
 
 function updateStatusUI(status) {

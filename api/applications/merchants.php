@@ -73,7 +73,12 @@ try {
                         $existing = $db->prepare('SELECT id, role FROM users WHERE email = ?');
                         $existing->execute([$eemail]);
                         $userRow = $existing->fetch();
-                        if ($userRow && $userRow['role'] !== 'employee') json_err('Employee email already registered with different role', 409);
+                        if ($userRow && $userRow['role'] !== 'employee') {
+                            if ($db->inTransaction()) {
+                                $db->rollBack();
+                            }
+                            json_err('Employee email already registered with different role', 409);
+                        }
                     } else {
                         $userRow = null;
                     }
@@ -113,7 +118,9 @@ try {
 
                     $db->commit();
                 } catch (Throwable $e) {
-                    $db->rollBack();
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
                     json_err('Server: ' . $e->getMessage(), 500);
                 }
 
@@ -174,7 +181,9 @@ try {
                 $db->commit();
                 json_ok(['id' => $appId], 201);
             } catch (Throwable $e) {
-                $db->rollBack();
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
                 json_err('Submission failed: ' . $e->getMessage(), 500);
             }
 
