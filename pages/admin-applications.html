@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Admin — Applications</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>body{padding:18px;max-width:1100px;margin:0 auto} .panel{background:#fff;padding:12px;border-radius:8px;margin-bottom:16px;border:1px solid #eee}</style>
+</head>
+<body>
+  <h2>Pending Applications</h2>
+  <div class="panel">
+    <h3>Rider Applications</h3>
+    <div id="ridersList">Loading…</div>
+  </div>
+  <div class="panel">
+    <h3>Merchant Applications</h3>
+    <div id="merchantsList">Loading…</div>
+  </div>
+  <div id="msg" style="margin-top:12px;color:green"></div>
+  <script>
+    const API = '../api/';
+    async function api(path, opts={}){
+      try{ const r = await fetch(API + path, opts); return await r.json(); }catch(e){return {ok:false,error:e.message}} }
+
+    (async()=>{
+      const me = await api('auth/?action=me'); if(!me.ok || me.data.role!=='admin') { location.href='../login.html'; return; }
+      await loadRiders(); await loadMerchants();
+    })();
+
+    async function loadRiders(){ const d = await api('applications/riders.php'); if(!d.ok) return document.getElementById('ridersList').textContent='Failed'; const rows = d.data||[]; if(!rows.length) return document.getElementById('ridersList').innerHTML='<em>None</em>'; document.getElementById('ridersList').innerHTML = rows.map(r=>{
+      return `<div style="padding:8px;border-bottom:1px solid #f3f3f3">`+
+        `<strong>${escapeHtml(r.fname+' '+r.lname)}</strong> — ${escapeHtml(r.email||'—')} — ${escapeHtml(r.phone||'—')}<br>`+
+        `Vehicle: ${escapeHtml(r.vehicle_type||'—')} — Applied: ${r.created_at}<br>`+
+        `${r.photo_path?'<img src="../'+r.photo_path+'" style="height:80px;margin-top:6px;">':''}${r.license_path?'<img src="../'+r.license_path+'" style="height:80px;margin-left:8px">':''}<br>`+
+        `<button type="button" onclick="doActionRider(${r.id},'approve',this)">Approve</button> `+
+        `<button type="button" onclick="doActionRider(${r.id},'reject',this)">Reject</button>`+
+      `</div>`;
+      }).join(''); }
+
+    async function loadMerchants(){ const d = await api('applications/merchants.php'); if(!d.ok) return document.getElementById('merchantsList').textContent='Failed'; const rows = d.data||[]; if(!rows.length) return document.getElementById('merchantsList').innerHTML='<em>None</em>'; document.getElementById('merchantsList').innerHTML = rows.map(r=>{
+      return `<div style="padding:8px;border-bottom:1px solid #f3f3f3">`+
+        `<strong>${escapeHtml(r.merchant_name)}</strong> — Manager: ${escapeHtml(r.employee_fname+' '+r.employee_lname)} — ${escapeHtml(r.employee_email||'—')} — ${escapeHtml(r.employee_phone||'—')}<br>`+
+        `${r.employee_face_path?'<img src="../'+r.employee_face_path+'" style="height:80px;margin-top:6px">':''}${r.employee_id_path?'<img src="../'+r.employee_id_path+'" style="height:80px;margin-left:8px">':''}<br>`+
+        `<button type="button" onclick="doActionMerchant(${r.id},'approve',this)">Approve</button> `+
+        `<button type="button" onclick="doActionMerchant(${r.id},'reject',this)">Reject</button>`+
+      `</div>`;
+      }).join(''); }
+
+    async function doActionRider(id,act,btn){ btn.disabled=true; const fd=new FormData(); fd.append('note','Approved by admin'); const res = await fetch(API + 'applications/riders.php?action='+act+'&id='+id, { method:'POST', body: fd }); const j=await res.json(); document.getElementById('msg').textContent = j.ok ? (j.data && j.data.temp_password ? ('Created user id '+j.data.user_id) : j.data?.message || 'Done') : (j.error||'Failed'); await loadRiders(); }
+
+    async function doActionMerchant(id,act,btn){ btn.disabled=true; const fd=new FormData(); fd.append('note','Processed by admin'); const res = await fetch(API + 'applications/merchants.php?action='+act+'&id='+id, { method:'POST', body: fd }); const j=await res.json(); document.getElementById('msg').textContent = j.ok ? (j.data && j.data.temp_password ? ('Merchant id '+j.data.merchant_id+'; emp user '+j.data.employee_user_id) : j.data?.message || 'Done') : (j.error||'Failed'); await loadMerchants(); }
+
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  </script>
+</body>
+</html>

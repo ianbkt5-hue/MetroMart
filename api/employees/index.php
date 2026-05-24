@@ -62,7 +62,7 @@ switch ($method) {
         $rows = db()->query(
             'SELECT u.id, u.email, u.status,
                     e.fname, e.lname, e.phone, e.position, e.profile_image,
-                    m.name AS merchant_name, e.merchant_id
+                    m.name AS merchant_name, m.image_path AS merchant_image, e.merchant_id
              FROM employees e
              JOIN users u     ON u.id  = e.id
              JOIN merchants m ON m.id  = e.merchant_id

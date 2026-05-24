@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Merchant Application — MetroMart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.min.css">
+  <script src="vendor/leaflet/leaflet.min.js"></script>
+  <style>
+    :root {
+      --green:       #1a7a3a;   --green-mid:   #228844;   --green-light: #f0f9f3;
+      --green-pale:  #e3f5e9;   --green-glow:  #2db055;
+      --ink:         #0f1a12;   --ink-mid:     #2e3d30;   --ink-soft:    #5a6b5c;
+      --stone:       #f6f5f1;   --stone-mid:   #ede9e1;   --stone-dark:  #d4cfc4;
+      --white:       #ffffff;   --amber:       #e8900a;   --red:         #d63b3b;
+      --radius-sm:   8px;       --radius-md:   14px;      --radius-lg:   22px;
+      --font-display: 'Fraunces', serif;
+      --font-body:    'DM Sans', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font-body); background: var(--stone); color: var(--ink); font-size: 15px; line-height: 1.6; min-height: 100vh; }
+    
+    .top-bar { background: var(--white); border-bottom: 1px solid var(--stone-dark); padding: 16px 0; position: sticky; top: 0; z-index: 100; }
+    .top-bar-inner { max-width: 900px; margin: 0 auto; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--green); letter-spacing: -0.5px; }
+    .logo .dot { color: var(--ink); }
+    .back-link { font-size: 13px; font-weight: 600; color: var(--green); text-decoration: none; cursor: pointer; transition: opacity .15s; }
+    .back-link:hover { opacity: 0.7; }
+    
+    .container { max-width: 900px; margin: 0 auto; padding: 56px 28px; }
+    
+    .form-header { margin-bottom: 42px; }
+    .form-title { font-family: var(--font-display); font-size: 32px; font-weight: 400; letter-spacing: -.5px; margin-bottom: 12px; }
+    .form-subtitle { font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
+    
+    .form-card { background: var(--white); border: 1.5px solid var(--stone-dark); border-radius: var(--radius-lg); padding: 40px; }
+    
+    .error-msg { background: #fee; border: 1px solid #fcc; border-radius: var(--radius-md); padding: 12px 16px; color: var(--red); font-size: 14px; margin-bottom: 20px; display: none; }
+    .error-msg.show { display: block; }
+    
+    .field-group { margin-bottom: 20px; }
+    .field-group label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 7px; letter-spacing: 0.3px; text-transform: uppercase; }
+    .field-group input, .field-group select { width: 100%; padding: 11px 14px; border: 1.5px solid var(--stone-dark); border-radius: var(--radius-sm); font-size: 14px; font-family: var(--font-body); color: var(--ink); transition: border-color .18s, box-shadow .18s; }
+    .field-group input:focus, .field-group select:focus { outline: none; border-color: var(--green-mid); box-shadow: 0 0 0 3px rgba(34,136,68,.1); }
+    .field-group input::placeholder { color: var(--ink-soft); }
+    .phone-wrap{display:flex;gap:8px;}
+    .phone-prefix{height:48px;padding:0 12px;border:1.5px solid var(--stone-dark);border-radius:11px;background:var(--stone);font-size:14px;font-weight:600;color:var(--ink-mid);display:flex;align-items:center;gap:6px;flex-shrink:0;font-family:'DM Sans',sans-serif;}
+    .phone-input{flex:1;}
+    .phone-input input{width:100%;height:48px;padding:0 14px;border:1.5px solid var(--stone-dark);border-radius:11px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);background:var(--stone);outline:none;transition:border-color .18s,background .18s,box-shadow .18s;}
+    .phone-input input:focus{border-color:var(--green-mid);background:var(--white);box-shadow:0 0 0 3px rgba(34,136,68,.1);}
+    .phone-input input::placeholder{color:var(--stone-dark);font-size:13px;}
+    .phone-hint{font-size:11px;color:var(--ink-soft);margin-top:5px;}
+    .phone-hint.error{color:var(--red);}
+    .email-hint{font-size:11px;color:var(--ink-soft);margin-top:5px;}
+    .email-hint.error{color:var(--red);}
+    .address-picker{width:100%;background:var(--stone);border:1.5px solid var(--stone-dark);border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .18s;font-size:14px;color:var(--ink);min-height:48px;}
+    .address-picker:hover{border-color:var(--green-mid);}
+    .address-picker.has-value{border-color:var(--green-mid);background:var(--green-light);}
+    .address-picker span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .address-picker .ap-placeholder{color:var(--stone-dark);}
+    .map-modal-wrap{background:var(--white);border-radius:16px;width:92%;max-width:700px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.12);}
+    .map-modal-head{padding:12px 16px;border-bottom:1px solid var(--stone-dark);display:flex;align-items:center;justify-content:space-between;}
+    .map-modal-head h3{font-family:'Fraunces',serif;font-size:18px;font-weight:400;margin:0;}
+    .map-modal-close{width:32px;height:32px;border-radius:50%;background:var(--stone-mid);border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+    .map-modal-close:hover{background:var(--stone-dark);}
+    .map-hint{padding:10px 16px;font-size:13px;color:var(--ink-soft);background:var(--green-light);}
+    #merchantAddressPickerMap{height:360px;width:100%;}
+    .map-modal-foot{padding:10px 12px;border-top:1px solid var(--stone-dark);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .map-modal-foot input{flex:1;min-width:120px;border:1.5px solid var(--stone-dark);border-radius:40px;padding:10px 14px;font-size:14px;outline:none;}
+    .btn-my-loc{padding:8px 12px;border-radius:40px;background:var(--green-light);color:var(--green);font-weight:600;border:none;}
+    .btn-confirm-loc{padding:8px 14px;border-radius:40px;background:var(--green);color:#fff;border:none;}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,26,18,.55);backdrop-filter:blur(6px);z-index:999;overflow:auto;}
+    .modal-overlay.open{display:block;}
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .field-row .field-group { margin-bottom: 0; }
+    .field-row.full { grid-template-columns: 1fr; }
+    
+    .file-input-wrap { position: relative; }
+    .file-input { position: relative; display: flex; flex-direction: column; }
+    .file-input input[type="file"] { padding: 32px 14px; border: 2px dashed var(--stone-dark); border-radius: var(--radius-md); background: var(--green-light); cursor: pointer; transition: border-color .18s, background .18s; }
+    .file-input input[type="file"]:hover { border-color: var(--green); background: var(--green-pale); }
+    
+    .section-divider { height: 1px; background: var(--stone-mid); margin: 28px 0; }
+    .section-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 20px; }
+    
+    .map-section { margin: 28px 0; }
+    .map-section label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 12px; letter-spacing: 0.3px; text-transform: uppercase; }
+    #locationMap { width: 100%; height: 320px; border-radius: var(--radius-md); border: 1.5px solid var(--stone-dark); }
+    .map-hint { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+    
+    .form-actions { display: flex; gap: 12px; margin-top: 32px; }
+    .btn { padding: 12px 28px; border-radius: 40px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all .18s; font-family: inherit; }
+    .btn-primary { background: var(--green); color: var(--white); }
+    .btn-primary:hover { background: var(--green-mid); transform: translateY(-1px); }
+    .btn-secondary { background: transparent; color: var(--green); border: 1.5px solid var(--stone-dark); text-decoration: none; display: inline-flex; align-items: center; }
+    .btn-secondary:hover { border-color: var(--green); }
+    
+    @media (max-width: 600px) {
+      .container { padding: 40px 18px; }
+      .form-card { padding: 28px 20px; }
+      .form-title { font-size: 24px; }
+      .field-row { grid-template-columns: 1fr; gap: 0; }
+      #locationMap { height: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="top-bar-inner">
+      <div class="logo">Metro<span class="dot">Mart</span></div>
+      <a class="back-link" onclick="window.location.href='index.html'">← Back</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="form-header">
+      <h1 class="form-title">Apply as Merchant</h1>
+      <p class="form-subtitle">Bring your store online with MetroMart. Submit your store details and employee information, and we'll review your application.</p>
+    </div>
+
+    <div class="form-card">
+      <div class="error-msg" id="msg"></div>
+
+      <div class="section-label">Store information</div>
+
+      <div class="field-group">
+        <label for="mname">Store / Merchant Name *</label>
+        <input id="mname" type="text" placeholder="Your store name">
+      </div>
+
+      <div class="field-group">
+        <label>Store address *</label>
+        <div class="address-picker" id="merchantAddressPicker" onclick="openMerchantAddressModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--green);"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span id="merchantAddressDisplay" class="ap-placeholder">Click to pin your store location on map</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:.4;"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+        <input type="hidden" id="merchantAddressVal">
+        <input type="hidden" id="merchantAddressLat" value="10.3157">
+        <input type="hidden" id="merchantAddressLng" value="123.8854">
+        <div class="phone-hint" id="merchantAddressHint">Pick your store location on the map.</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label for="efname">Employee first name *</label>
+          <input id="efname" type="text" placeholder="First name">
+        </div>
+        <div class="field-group">
+          <label for="elname">Employee last name *</label>
+          <input id="elname" type="text" placeholder="Last name">
+        </div>
+      </div>
+
+        <div class="field-group file-input-wrap">
+          <label for="mimg">Store image *</label>
+          <div class="file-input">
+            <input id="mimg" type="file" accept="image/*">
+          </div>
+        </div>
+
+
+      <div class="field-row">
+        <div class="field-group">
+          <label for="eemail">Employee email *</label>
+          <input id="eemail" type="email" placeholder="employee@gmail.com" autocomplete="email" oninput="validateEmailLive('eemail','eemailHint')">
+          <div class="email-hint" id="eemailHint" style="display:none;"></div>
+        </div>
+        <div class="field-group">
+          <label for="ephone">Phone *</label>
+          <div class="phone-wrap">
+            <div class="phone-prefix">🇵🇭 +63</div>
+            <div class="phone-input">
+              <input id="ephone" type="tel" maxlength="10" placeholder="9xxxxxxxxx" autocomplete="tel" oninput="validatePhoneLive('ephone','ephoneHint')">
+            </div>
+          </div>
+          <div class="phone-hint" id="ephoneHint">Philippine number — 10 digits starting with 9 (e.g. 9171234567)</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field-group">
+          <label for="password">Password *</label>
+          <input id="password" type="password" placeholder="Create a password">
+        </div>
+        <div class="field-group">
+          <label for="confirm">Confirm password *</label>
+          <input id="confirm" type="password" placeholder="Repeat password">
+        </div>
+      </div>
+
+      <div class="section-divider"></div>
+      <div class="section-label">Documentation</div>
+
+      <div class="field-group file-input-wrap">
+        <label for="eface">Employee face photo *</label>
+        <div class="file-input">
+          <input id="eface" type="file" accept="image/*">
+        </div>
+      </div>
+
+      <div class="field-group file-input-wrap">
+        <label for="eid">Employee ID (image or PDF) *</label>
+        <div class="file-input">
+          <input id="eid" type="file" accept="image/*,application/pdf">
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" id="submitBtn">Submit Application</button>
+        <a class="btn btn-secondary" href="index.html">Cancel</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="merchantAddressModal">
+    <div class="map-modal-wrap" style="margin:40px auto;">
+      <div class="map-modal-head">
+        <h3>Pin Store Location</h3>
+        <button class="map-modal-close" onclick="closeMerchantAddressModal()">✕</button>
+      </div>
+      <div class="map-hint">📌 Click the map to pin your store address, drag the marker, or search below.</div>
+      <div id="merchantAddressPickerMap"></div>
+      <div class="map-modal-foot">
+        <input type="text" id="merchantAddrSearchInput" placeholder="Search address… (press Enter)" onkeydown="if(event.key==='Enter')searchMerchantAddress()">
+        <button class="btn-my-loc" onclick="useMerchantLocation()">📍 My Location</button>
+        <button class="btn-confirm-loc" onclick="confirmMerchantAddress()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('submitBtn').type = 'button';
+
+    function validatePhoneLive(inputId = 'ephone', hintId = 'ephoneHint') {
+      const raw = document.getElementById(inputId).value.replace(/\D/g,'');
+      const hint = document.getElementById(hintId);
+      if (!raw) {
+        hint.textContent = 'Philippine number — 10 digits starting with 9 (e.g. 9171234567)';
+        hint.className = 'phone-hint';
+        hint.style.color = '';
+        return;
+      }
+      if (raw.length === 10 && raw.startsWith('9')) {
+        hint.textContent = '✓ Valid Philippine number';
+        hint.className = 'phone-hint';
+        hint.style.color = 'var(--green)';
+      } else {
+        hint.textContent = 'Must be 10 digits starting with 9 (e.g. 9171234567)';
+        hint.className = 'phone-hint error';
+        hint.style.color = 'var(--red)';
+      }
+    }
+
+    function validateEmailLive(inputId = 'eemail', hintId = 'eemailHint') {
+      const email = document.getElementById(inputId).value.trim();
+      const hint = document.getElementById(hintId);
+      if (!email) {
+        hint.style.display = 'none';
+        return;
+      }
+      hint.style.display = 'block';
+      const basic = /^[^\s@]+@[^\s@]+$/.test(email);
+      if (!basic) {
+        hint.textContent = '✗ Enter a valid email address';
+        hint.style.color = 'var(--red)';
+      } else {
+        hint.textContent = '✓ Valid email address';
+        hint.style.color = 'var(--green)';
+      }
+    }
+
+    let merchantMap = null, merchantMarker = null;
+    let merchantLat = 10.3157, merchantLng = 123.8854, merchantAddr = '';
+
+    function openMerchantAddressModal() {
+      const currentAddress = document.getElementById('merchantAddressVal').value.trim();
+      if (currentAddress) merchantAddr = currentAddress;
+      const modal = document.getElementById('merchantAddressModal');
+      modal.classList.add('open');
+
+      if (!merchantMap) {
+        merchantMap = L.map('merchantAddressPickerMap').setView([merchantLat, merchantLng], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap',
+          maxZoom: 19
+        }).addTo(merchantMap);
+
+        const pinIcon = L.divIcon({
+          className: '',
+          html: '<div style="font-size:32px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))">📍</div>',
+          iconAnchor: [16, 32],
+          iconSize: [32, 32]
+        });
+
+        merchantMarker = L.marker([merchantLat, merchantLng], { icon: pinIcon, draggable: true }).addTo(merchantMap);
+        merchantMap.on('click', e => {
+          merchantLat = e.latlng.lat;
+          merchantLng = e.latlng.lng;
+          merchantMarker.setLatLng(e.latlng);
+          revMerchantAddress(merchantLat, merchantLng);
+        });
+        merchantMarker.on('dragend', e => {
+          const ll = e.target.getLatLng();
+          merchantLat = ll.lat;
+          merchantLng = ll.lng;
+          revMerchantAddress(merchantLat, merchantLng);
+        });
+
+        setTimeout(() => merchantMap.invalidateSize(), 100);
+      } else {
+        merchantMap.setView([merchantLat, merchantLng], 14);
+        merchantMarker.setLatLng([merchantLat, merchantLng]);
+        merchantMap.invalidateSize();
+      }
+
+      if (merchantAddr) {
+        document.getElementById('merchantAddrSearchInput').value = merchantAddr;
+      }
+    }
+
+    async function revMerchantAddress(lat, lng) {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+        const d = await r.json();
+        merchantAddr = d.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      } catch {
+        merchantAddr = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      }
+      document.getElementById('merchantAddrSearchInput').value = merchantAddr;
+    }
+
+    async function searchMerchantAddress() {
+      const q = document.getElementById('merchantAddrSearchInput').value.trim();
+      if (!q) return;
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+        const d = await r.json();
+        if (!d.length) { alert('Address not found.'); return; }
+        merchantLat = parseFloat(d[0].lat);
+        merchantLng = parseFloat(d[0].lon);
+        merchantAddr = d[0].display_name;
+        merchantMap.setView([merchantLat, merchantLng], 16);
+        merchantMarker.setLatLng([merchantLat, merchantLng]);
+        document.getElementById('merchantAddrSearchInput').value = merchantAddr;
+      } catch {
+        alert('Search failed.');
+      }
+    }
+
+    function useMerchantLocation() {
+      if (!navigator.geolocation) { alert('Geolocation not supported.'); return; }
+      navigator.geolocation.getCurrentPosition(pos => {
+        merchantLat = pos.coords.latitude;
+        merchantLng = pos.coords.longitude;
+        merchantMap.setView([merchantLat, merchantLng], 16);
+        merchantMarker.setLatLng([merchantLat, merchantLng]);
+        revMerchantAddress(merchantLat, merchantLng);
+      }, () => alert('Could not get location.'));
+    }
+
+    function confirmMerchantAddress() {
+      if (!merchantAddr) { alert('Please pick a location on the map first.'); return; }
+      document.getElementById('merchantAddressVal').value = merchantAddr;
+      document.getElementById('merchantAddressLat').value = merchantLat;
+      document.getElementById('merchantAddressLng').value = merchantLng;
+      const display = document.getElementById('merchantAddressDisplay');
+      display.textContent = merchantAddr.length > 60 ? merchantAddr.slice(0,60) + '…' : merchantAddr;
+      display.className = '';
+      document.getElementById('merchantAddressPicker').classList.add('has-value');
+      closeMerchantAddressModal();
+    }
+
+    function closeMerchantAddressModal() {
+      const modal = document.getElementById('merchantAddressModal');
+      modal.classList.remove('open');
+    }
+
+    document.getElementById('merchantAddressModal').addEventListener('click', (event) => {
+      if (event.target === document.getElementById('merchantAddressModal')) {
+        closeMerchantAddressModal();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeMerchantAddressModal();
+      }
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const msg = document.getElementById('msg');
+      msg.classList.remove('show');
+
+      const mname = document.getElementById('mname').value.trim();
+      const address = document.getElementById('merchantAddressVal').value.trim();
+      const lat = document.getElementById('merchantAddressLat').value.trim();
+      const lng = document.getElementById('merchantAddressLng').value.trim();
+      const efname = document.getElementById('efname').value.trim();
+      const elname = document.getElementById('elname').value.trim();
+      const eemail = document.getElementById('eemail').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirm').value;
+      const ephone = document.getElementById('ephone').value.replace(/\D/g,'').replace(/^0/, '');
+
+      if (!mname) {
+        msg.textContent = 'Store name is required.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!address) {
+        msg.textContent = 'Store address is required. Please select it on the map.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!lat || !lng) {
+        msg.textContent = 'Store location is required. Please confirm the address on the map.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!efname || !elname) {
+        msg.textContent = 'Employee name is required.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!eemail) {
+        msg.textContent = 'Employee email is required.';
+        msg.classList.add('show');
+        return;
+      }
+      const basic = /^[^\s@]+@[^\s@]+$/.test(eemail);
+      if (!basic) {
+        msg.textContent = 'Please enter a valid email address for the employee.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!password || !confirm) {
+        msg.textContent = 'Please enter and confirm your password.';
+        msg.classList.add('show');
+        return;
+      }
+      if (password !== confirm) {
+        msg.textContent = 'Passwords do not match.';
+        msg.classList.add('show');
+        return;
+      }
+      if (password.length < 8) {
+        msg.textContent = 'Password must be at least 8 characters.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!/[A-Z]/.test(password)) {
+        msg.textContent = 'Password must contain at least one uppercase letter.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!/[0-9]/.test(password)) {
+        msg.textContent = 'Password must contain at least one number.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!/[^A-Za-z0-9]/.test(password)) {
+        msg.textContent = 'Password must contain at least one special character.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!ephone) {
+        msg.textContent = 'Employee phone is required.';
+        msg.classList.add('show');
+        return;
+      }
+      if (!/^9\d{9}$/.test(ephone)) {
+        msg.textContent = 'Enter a valid Philippine phone number (10 digits starting with 9).';
+        msg.classList.add('show');
+        return;
+      }
+      const face = document.getElementById('eface').files[0];
+      if (!face) {
+        msg.textContent = 'Employee face photo is required.';
+        msg.classList.add('show');
+        return;
+      }
+      const idf = document.getElementById('eid').files[0];
+      if (!idf) {
+        msg.textContent = 'Employee ID document is required.';
+        msg.classList.add('show');
+        return;
+      }
+      const mimg = document.getElementById('mimg').files[0];
+      if (!mimg) {
+        msg.textContent = 'Store image is required.';
+        msg.classList.add('show');
+        return;
+      }
+
+      const form = new FormData();
+      form.append('merchant_name', mname);
+      form.append('address', address);
+      form.append('latitude', lat);
+      form.append('longitude', lng);
+      form.append('employee_fname', efname);
+      form.append('employee_lname', elname);
+      form.append('employee_email', eemail);
+      form.append('employee_phone', ephone);
+      form.append('password', password);
+      form.append('confirm', confirm);
+
+      if (mimg) form.append('merchant_image', mimg);
+      if (face) form.append('employee_face', face);
+      if (idf) form.append('employee_id', idf);
+
+      try {
+        const r = await fetch('api/applications/merchants.php', { method: 'POST', body: form });
+        const d = await r.json();
+        if (!d.ok) {
+          msg.textContent = d.error || 'Submission failed. Please try again.';
+          msg.classList.add('show');
+          return;
+        }
+        alert('✓ Application submitted — thank you! We\'ll review it shortly.');
+        window.location.href = 'index.html';
+      } catch(e) {
+        msg.textContent = 'Network error. Please check your connection and try again.';
+        msg.classList.add('show');
+      }
+    });
+  </script>
+</body>
+</html>

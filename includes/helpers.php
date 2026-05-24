@@ -92,9 +92,10 @@ function save_upload(string $field, string $subdir = 'misc'): ?string {
 
     $file   = $_FILES[$field];
     $ext    = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allow  = ['jpg','jpeg','png','gif','webp'];
+    // Allow images and PDFs for documents like licenses
+    $allow  = ['jpg','jpeg','png','gif','webp','pdf'];
     if (!in_array($ext, $allow, true)) return null;
-    if ($file['size'] > 2 * 1024 * 1024) return null;   // 2 MB cap
+    if ($file['size'] > 5 * 1024 * 1024) return null;   // 5 MB cap for PDFs
 
     $dir  = __DIR__ . "/../uploads/{$subdir}/";
     if (!is_dir($dir)) mkdir($dir, 0755, true);

@@ -427,6 +427,7 @@ async function api(path, opts = {}) {
 (async () => {
   const me = await api('auth/?action=me');
   if (!me.ok || me.data.role !== 'rider') { window.location.href = '../login.html'; return; }
+  if (me.data.status !== 'active') { window.location.href = '../pages/application-status.html'; return; }
   currentUser = me.data;
 
   // Force password change check

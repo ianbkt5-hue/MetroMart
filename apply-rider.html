@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Apply as Rider — MetroMart</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>body{padding:24px;max-width:720px;margin:0 auto} .form-group{margin-bottom:12px}</style>
+</head>
+<body>
+  <h2>Rider Application</h2>
+  <p>Please fill your personal details and upload your driver's license and face photo.</p>
+  <form id="riderForm">
+    <div class="form-group"><label>First name*</label><input name="fname" required></div>
+    <div class="form-group"><label>Last name*</label><input name="lname" required></div>
+    <div class="form-group"><label>Email</label><input name="email" type="email"></div>
+    <div class="form-group"><label>Phone (10 digits)</label><input name="phone" pattern="[0-9]{10}"></div>
+    <div class="form-group"><label>Vehicle type</label>
+      <select name="vehicle_type"><option value="motorcycle">Motorcycle</option><option value="bicycle">Bicycle</option><option value="car">Car</option></select>
+    </div>
+    <div class="form-group"><label>Driver's license (image, max 2MB)</label><input name="license" type="file" accept="image/*"></div>
+    <div class="form-group"><label>Face photo (image, max 2MB)</label><input name="photo" type="file" accept="image/*"></div>
+    <div style="margin-top:18px;"><button type="submit">Submit Application</button></div>
+  </form>
+  <div id="msg" style="margin-top:14px;color:green"></div>
+  <script>
+    const form = document.getElementById('riderForm');
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const res = await fetch('api/applications/riders.php', { method: 'POST', body: fd });
+      const d = await res.json();
+      const msg = document.getElementById('msg');
+      if (!d.ok) { msg.style.color='red'; msg.textContent = d.error || 'Submission failed'; return; }
+      msg.style.color='green'; msg.textContent = 'Application submitted — ID: ' + (d.data.id || '—');
+      form.reset();
+    });
+  </script>
+</body>
+</html>

@@ -29,7 +29,13 @@ const SECURITY_QUESTIONS = [
 if ($action === 'me') {
     $user = current_user();
     if (!$user) json_err('Not logged in', 401);
-    json_ok($user);
+
+    $stmt = db()->prepare('SELECT id,email,role,name,status,force_password_change FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$user['id']]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row) json_err('Not logged in', 401);
+
+    json_ok($row);
 }
 
 // ── LOGIN ─────────────────────────────────────
@@ -39,12 +45,16 @@ if ($action === 'login' && $method === 'POST') {
     $pass  = $b['password']      ?? '';
     if (!$email || !$pass) json_err('Email and password are required', 422);
 
-    $stmt = db()->prepare("SELECT * FROM users WHERE email = ? AND status = 'active' LIMIT 1");
+    $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1');
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user || !password_verify($pass, $user['password'])) {
         json_err('Wrong email or password', 401);
+    }
+
+    if ($user['status'] !== 'active' && !in_array($user['role'], ['rider','employee'], true)) {
+        json_err('Account is not active yet', 403);
     }
 
     $_SESSION['user'] = [
@@ -60,6 +70,14 @@ if ($action === 'login' && $method === 'POST') {
             'redirect'              => base_url('change-password.html'),
             'role'                  => $user['role'],
             'force_password_change' => true,
+        ]);
+    }
+
+    if ($user['status'] !== 'active') {
+        json_ok([
+            'redirect' => base_url('pages/application-status.html'),
+            'role'     => $user['role'],
+            'status'   => $user['status'],
         ]);
     }
 

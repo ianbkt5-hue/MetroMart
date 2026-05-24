@@ -1,0 +1,26 @@
+<!-- Employee Detail Modal (inserted into admin-dashboard) -->
+<div class="modal-overlay" id="employeeDetailModal">
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-header"><h3>Employee Details</h3><button class="modal-close" onclick="closeModal('employeeDetailModal')">✕</button></div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-item"><label>Name</label><span id="emp_d_name">—</span></div>
+        <div class="detail-item"><label>Email</label><span id="emp_d_email">—</span></div>
+        <div class="detail-item"><label>Phone</label><span id="emp_d_phone">—</span></div>
+        <div class="detail-item"><label>Position</label><span id="emp_d_position">—</span></div>
+        <div class="detail-item"><label>Store</label><span id="emp_d_store">—</span></div>
+        <div class="detail-item"><label>Store Contact</label><span id="emp_d_store_contact">—</span></div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+        <div><label>Profile</label><div id="emp_d_profile" style="width:160px;height:120px;background:var(--stone);display:flex;align-items:center;justify-content:center;border-radius:8px;overflow:hidden;"></div></div>
+        <div style="flex:1;min-width:200px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('employeeDetailModal')">Close</button>
+      <button type="button" class="btn btn-primary" onclick="editEmployee(document.getElementById('emp_d_id').value)">Edit</button>
+    </div>
+  </div>
+</div>
+<!-- hidden id holder -->
+<input type="hidden" id="emp_d_id" />

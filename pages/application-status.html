@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Status — MetroMart</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f7f6f2; }
+    .status-panel { width: min(680px, 100%); margin: 24px; background: #fff; border-radius: 20px; box-shadow: 0 20px 50px rgba(15,23,42,.06); padding: 32px; }
+    .status-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+    .status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 13px; }
+    .pill-pending { background: #fdf7e8; color: #92400e; }
+    .pill-approved { background: #ecfdf5; color: #166534; }
+    .pill-rejected { background: #fee2e2; color: #991b1b; }
+    .section { margin-bottom: 24px; }
+    .section h2 { margin-bottom: 12px; font-size: 18px; }
+    .section p { margin: 0 0 14px; color: #475569; line-height: 1.7; }
+    .detail-grid { display: grid; gap: 12px; }
+    .detail-row { display: flex; justify-content: space-between; gap: 16px; padding: 14px 16px; background: #f8fafc; border-radius: 14px; }
+    .detail-row strong { color: #0f172a; }
+    .footer-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn { border: none; border-radius: 999px; padding: 12px 22px; font-weight: 700; cursor: pointer; }
+    .btn-primary { background: #1a7a3a; color: #fff; }
+    .btn-secondary { background: #f1f5f9; color: #334155; }
+    .alert { border-radius: 14px; background: #f1f5f9; padding: 18px 20px; margin-bottom: 20px; color: #334155; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="status-panel">
+    <div class="status-header">
+      <div>
+        <p style="margin-bottom:8px;color:#64748b;font-size:13px;letter-spacing:.06em;text-transform:uppercase;">Application Status</p>
+        <h1 style="font-size:28px;line-height:1.1;margin:0;">Your account is under review</h1>
+      </div>
+      <span id="statusBadge" class="status-pill pill-pending">Pending review</span>
+    </div>
+
+    <div id="message" class="alert">We are reviewing your application. You may log in anytime to check the latest status.</div>
+
+    <div class="section">
+      <h2>Application details</h2>
+      <div class="detail-grid">
+        <div class="detail-row"><span>Application type</span><strong id="appRole">—</strong></div>
+        <div class="detail-row"><span>Email</span><strong id="appEmail">—</strong></div>
+        <div class="detail-row"><span>Submitted</span><strong id="appCreated">—</strong></div>
+        <div class="detail-row"><span>Status</span><strong id="appStatus">—</strong></div>
+      </div>
+    </div>
+
+    <div class="section hidden" id="noteSection">
+      <h2>Admin note</h2>
+      <p id="adminNote">—</p>
+    </div>
+
+    <div class="section">
+      <h2>What happens next?</h2>
+      <p id="nextStep">Once an admin approves your application, you will be redirected to your dashboard on your next login.</p>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn btn-primary" onclick="refreshStatus()">Refresh status</button>
+      <button class="btn btn-secondary" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    const API = '../api/';
+    async function api(path, opts = {}) {
+      try {
+        const isForm = opts.body instanceof FormData;
+        const res = await fetch(API + path, { headers: isForm ? {} : { 'Content-Type': 'application/json' }, ...opts });
+        return await res.json();
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? '—' : date.toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' });
+    }
+
+    function setStatusBadge(status) {
+      const badge = document.getElementById('statusBadge');
+      badge.className = 'status-pill';
+      if (status === 'approved') {
+        badge.classList.add('pill-approved');
+        badge.textContent = 'Approved';
+      } else if (status === 'rejected') {
+        badge.classList.add('pill-rejected');
+        badge.textContent = 'Rejected';
+      } else {
+        badge.classList.add('pill-pending');
+        badge.textContent = 'Pending review';
+      }
+    }
+
+    async function refreshStatus() {
+      const status = await loadStatus();
+      if (!status) return;
+    }
+
+    async function loadStatus() {
+      const me = await api('auth/?action=me');
+      if (!me.ok) {
+        window.location.href = '../login.html';
+        return null;
+      }
+      if (me.data.status === 'active') {
+        const redirect = me.data.role === 'employee' ? 'employee-dashboard.html' : 'rider-dashboard.html';
+        window.location.href = redirect;
+        return null;
+      }
+
+      const res = await api('applications/status.php');
+      if (!res.ok) {
+        document.getElementById('message').textContent = res.error || 'Unable to load application status.';
+        return null;
+      }
+
+      const app = res.data;
+      document.getElementById('appRole').textContent = me.data.role === 'employee' ? 'Merchant employee' : 'Rider';
+      document.getElementById('appEmail').textContent = app.employee_email || app.email || me.data.email || '—';
+      document.getElementById('appCreated').textContent = formatDate(app.created_at);
+      document.getElementById('appStatus').textContent = app.status ? app.status.charAt(0).toUpperCase() + app.status.slice(1) : 'Pending';
+      setStatusBadge(app.status);
+
+      const noteSection = document.getElementById('noteSection');
+      if (app.admin_note) {
+        noteSection.classList.remove('hidden');
+        document.getElementById('adminNote').textContent = app.admin_note;
+      } else {
+        noteSection.classList.add('hidden');
+      }
+
+      document.getElementById('message').textContent = app.status === 'rejected'
+        ? 'Your application was not approved. Please review the admin note and contact support if you need more information.'
+        : 'Your application is currently under review. Please check back later or refresh this page.';
+
+      return app;
+    }
+
+    async function doLogout() {
+      await api('auth/?action=logout', { method: 'POST' });
+      window.location.href = '../login.html';
+    }
+
+    loadStatus();
+  </script>
+</body>
+</html>

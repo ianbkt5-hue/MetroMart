@@ -442,6 +442,7 @@ async function api(path, opts = {}) {
 (async () => {
   const me = await api('auth/?action=me');
   if (!me.ok || me.data.role !== 'employee') { window.location.href = '../login.html'; return; }
+  if (me.data.status !== 'active') { window.location.href = '../pages/application-status.html'; return; }
   currentUser = me.data;
   document.getElementById('avatarEl').textContent = (currentUser.name || 'E')[0].toUpperCase();
   document.getElementById('pEmail').value = currentUser.email || '';

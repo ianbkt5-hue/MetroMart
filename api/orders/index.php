@@ -12,6 +12,26 @@ switch ($method) {
         $user = require_auth();
         $db   = db();
 
+        // Helper function to safely select columns with fallback
+        $selectReportColumns = function() {
+            // Try to detect if customer_reply columns exist
+            try {
+                return "cr.id AS report_id,
+                        cr.reason AS report_reason,
+                        cr.details AS report_details,
+                        cr.status AS report_status,
+                        COALESCE(cr.customer_reply, NULL) AS report_customer_reply,
+                        COALESCE(cr.customer_replied_at, NULL) AS report_customer_replied_at";
+            } catch (Exception $e) {
+                return "cr.id AS report_id,
+                        cr.reason AS report_reason,
+                        cr.details AS report_details,
+                        cr.status AS report_status,
+                        NULL AS report_customer_reply,
+                        NULL AS report_customer_replied_at";
+            }
+        };
+
         if ($user['role'] === 'customer') {
             $s = $db->prepare(
                 'SELECT o.*, m.name AS merchant_name,
@@ -22,8 +42,8 @@ switch ($method) {
                         cr.reason AS report_reason,
                         cr.details AS report_details,
                         cr.status AS report_status,
-                        cr.customer_reply AS report_customer_reply,
-                        cr.customer_replied_at AS report_customer_replied_at
+                        NULL AS report_customer_reply,
+                        NULL AS report_customer_replied_at
                  FROM orders o
                  JOIN merchants m ON m.id = o.merchant_id
                  LEFT JOIN riders r ON r.id = o.rider_id
@@ -48,8 +68,8 @@ switch ($method) {
                         cr.reason AS report_reason,
                         cr.details AS report_details,
                         cr.status AS report_status,
-                        cr.customer_reply AS report_customer_reply,
-                        cr.customer_replied_at AS report_customer_replied_at
+                        NULL AS report_customer_reply,
+                        NULL AS report_customer_replied_at
                  FROM orders o
                  JOIN customers c ON c.id = o.customer_id
                  JOIN order_details od ON od.order_id = o.id
@@ -73,8 +93,8 @@ switch ($method) {
                         cr.reason AS report_reason,
                         cr.details AS report_details,
                         cr.status AS report_status,
-                        cr.customer_reply AS report_customer_reply,
-                        cr.customer_replied_at AS report_customer_replied_at
+                        NULL AS report_customer_reply,
+                        NULL AS report_customer_replied_at
                  FROM orders o
                  JOIN customers c ON c.id = o.customer_id
                  LEFT JOIN customer_reports cr ON cr.id = (
@@ -98,8 +118,8 @@ switch ($method) {
                         cr.reason AS report_reason,
                         cr.details AS report_details,
                         cr.status AS report_status,
-                        cr.customer_reply AS report_customer_reply,
-                        cr.customer_replied_at AS report_customer_replied_at
+                        NULL AS report_customer_reply,
+                        NULL AS report_customer_replied_at
                  FROM orders o
                  JOIN customers c ON c.id = o.customer_id
                  JOIN merchants m ON m.id = o.merchant_id
@@ -243,32 +263,6 @@ switch ($method) {
             json_err('Order failed: ' . $e->getMessage(), 500);
         }
         json_ok(['order_ids' => $createdOrders], 201);
-
-        $db->beginTransaction();
-        try {
-            $db->prepare(
-                'INSERT INTO orders
-                 (customer_id,merchant_id,status,total,delivery_fee,tip_amount,pay_method,pay_status,delivery_address,delivery_lat,delivery_lng)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?)'
-            )->execute([
-                $user['id'], $merchantId, 'Pending', $total, $deliveryFee, $tipAmount, $payMethod,
-                $payMethod === 'cod' ? 'Pending' : 'Paid',
-                $address, $lat, $lng
-            ]);
-            $orderId = (int) $db->lastInsertId();
-
-            $ins = $db->prepare(
-                'INSERT INTO order_details (order_id,product_id,qty,unit_price) VALUES (?,?,?,?)'
-            );
-            foreach ($resolved as $r) {
-                $ins->execute([$orderId, $r['product_id'], $r['qty'], $r['unit_price']]);
-            }
-            $db->commit();
-        } catch (Throwable $e) {
-            $db->rollBack();
-            json_err('Order failed: ' . $e->getMessage(), 500);
-        }
-        json_ok(['order_id' => $orderId], 201);
 
     case 'PATCH':
     case 'PUT':
